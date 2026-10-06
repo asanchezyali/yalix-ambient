@@ -160,11 +160,14 @@ def figure(t: float, bar: float) -> np.ndarray:
     local = (t - idx * bar) / bar
     a1, b1 = SHAPES[idx % len(SHAPES)]
     a2, b2 = SHAPES[(idx + 1) % len(SHAPES)]
-    delta = 2 * np.pi * t / 60
+    delta = 2 * np.pi * t / 150  # slow phase drift: fast drift + trail filled a box
     m = smootherstep((local - 0.5) / 0.5)
     p1 = np.stack([np.sin(a1 * THETA + delta), np.sin(b1 * THETA)], axis=1)
     p2 = np.stack([np.sin(a2 * THETA + delta), np.sin(b2 * THETA)], axis=1)
-    return (1 - m) * p1 + m * p2
+    pts = (1 - m) * p1 + m * p2
+    ang = 0.12 * np.sin(2 * np.pi * t / 70)  # gentle sway so no edge stays axis-aligned
+    c, s = np.cos(ang), np.sin(ang)
+    return pts @ np.array([[c, s], [-s, c]])
 
 
 def strip(points: np.ndarray, colors: np.ndarray, width: float) -> np.ndarray:
@@ -271,7 +274,7 @@ def render_video(analysis_path: Path, out_path: Path, fps: int = 30) -> None:
         prev_tex.use(0)
         cur_tex.use(1)
         trail_p["prev"].value, trail_p["cur"].value = 0, 1
-        trail_p["decay"].value = 0.93
+        trail_p["decay"].value = 0.88
         trail_vao.render(moderngl.TRIANGLE_STRIP)
 
         # 4. bloom (half resolution, two separable passes)
