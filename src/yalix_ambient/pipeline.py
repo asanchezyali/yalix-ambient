@@ -98,7 +98,7 @@ def build(minutes: float, seed: int, name: str, bpm: float = 72.0) -> Path:
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Math-generated ambient video")
-    p.add_argument("--minutes", type=float, default=1.0)
+    p.add_argument("--minutes", type=float, default=3.0)
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--bpm", type=float, default=72.0)
     p.add_argument("--name", default="prototype")
