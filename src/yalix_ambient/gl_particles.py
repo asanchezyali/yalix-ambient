@@ -3,7 +3,8 @@
 Three families, one pipeline (nebula background -> additive particles -> feedback trail
 -> bloom -> composite, piped to ffmpeg):
 
-- attractor: chaotic flows (Lorenz, Thomas, Aizawa, Halvorsen, Rössler, Dadras).
+- attractor: chaotic flows (Lorenz, Thomas, Aizawa, Halvorsen, Rössler, Dadras, Chen,
+  four-wing, Arneodo).
   Particles are sampled along one long trajectory so the whole attractor shows from
   frame one. The camera frames it automatically with PCA: it looks along the axis of
   least variance (the most open view) and sways ±25° around it. The time step is
@@ -36,6 +37,13 @@ PALETTES = {
     "toxic": [[0.45, 0.85, 0.25], [0.85, 0.90, 0.70], [0.65, 0.20, 0.15], [0.25, 0.65, 0.45]],
     "blood": [[0.80, 0.05, 0.10], [0.45, 0.02, 0.06], [0.95, 0.35, 0.35], [0.60, 0.10, 0.40]],
     "aurora": [[0.20, 0.95, 0.65], [0.35, 0.55, 1.00], [0.80, 0.35, 0.95], [0.15, 0.75, 0.90]],
+    # grunge: muted, earthy colours that still glow
+    "rust": [[0.75, 0.30, 0.10], [0.95, 0.55, 0.25], [0.45, 0.15, 0.08], [0.85, 0.70, 0.45]],
+    "moss": [[0.35, 0.55, 0.25], [0.70, 0.75, 0.40], [0.20, 0.35, 0.30], [0.85, 0.80, 0.55]],
+    "bruise": [[0.45, 0.25, 0.65], [0.70, 0.35, 0.55], [0.25, 0.30, 0.65], [0.85, 0.60, 0.75]],
+    "rain": [[0.40, 0.55, 0.75], [0.70, 0.80, 0.90], [0.25, 0.35, 0.55], [0.55, 0.75, 0.80]],
+    "nicotine": [[0.85, 0.70, 0.30], [0.95, 0.85, 0.55], [0.60, 0.40, 0.15], [0.75, 0.55, 0.35]],
+    "ash": [[0.70, 0.68, 0.65], [0.90, 0.85, 0.80], [0.45, 0.45, 0.50], [0.80, 0.55, 0.40]],
 }
 NEBULAE = {
     "crimson": [[0.16, 0.01, 0.04], [0.10, 0.02, 0.15], [0.04, 0.01, 0.08], [0.14, 0.02, 0.09]],
@@ -43,6 +51,11 @@ NEBULAE = {
     "inferno": [[0.18, 0.04, 0.01], [0.10, 0.01, 0.02], [0.05, 0.02, 0.01], [0.16, 0.06, 0.02]],
     "venom": [[0.03, 0.10, 0.04], [0.08, 0.02, 0.06], [0.02, 0.04, 0.03], [0.06, 0.09, 0.02]],
     "void": [[0.06, 0.02, 0.10], [0.02, 0.02, 0.06], [0.10, 0.02, 0.06], [0.03, 0.05, 0.10]],
+    "sepia": [[0.14, 0.07, 0.03], [0.08, 0.05, 0.04], [0.04, 0.03, 0.02], [0.12, 0.08, 0.04]],
+    "swamp": [[0.05, 0.09, 0.05], [0.08, 0.07, 0.03], [0.02, 0.04, 0.04], [0.06, 0.08, 0.06]],
+    "dusk": [[0.09, 0.04, 0.13], [0.04, 0.03, 0.10], [0.12, 0.04, 0.08], [0.05, 0.05, 0.12]],
+    "slate": [[0.04, 0.07, 0.12], [0.06, 0.06, 0.09], [0.02, 0.04, 0.07], [0.07, 0.09, 0.12]],
+    "smoke": [[0.08, 0.08, 0.09], [0.11, 0.08, 0.06], [0.04, 0.04, 0.05], [0.09, 0.09, 0.11]],
 }
 
 # ------------------------------------------------------------------ attractors
@@ -85,6 +98,23 @@ def _dadras(p):
     return np.stack([y - a * x + b * y * z, c * y - x * z + z, d * x * y - e * z], axis=1)
 
 
+def _chen(p):
+    x, y, z = p.T
+    a, b, c = 35.0, 3.0, 28.0
+    return np.stack([a * (y - x), (c - a) * x - x * z + c * y, x * y - b * z], axis=1)
+
+
+def _fourwing(p):
+    x, y, z = p.T
+    a, b, c = 0.2, 0.01, -0.4
+    return np.stack([a * x + y * z, b * x + c * y - x * z, -z - x * y], axis=1)
+
+
+def _arneodo(p):
+    x, y, z = p.T
+    return np.stack([y, z, 5.5 * x - 3.5 * y - z - x**3], axis=1)
+
+
 ATTRACTORS = {
     # name: (derivative, start, integration dt for sampling)
     "lorenz": (_lorenz, (1.0, 1.0, 20.0), 0.005),
@@ -93,6 +123,9 @@ ATTRACTORS = {
     "halvorsen": (_halvorsen, (-1.48, -1.51, 2.04), 0.005),
     "rossler": (_rossler, (1.0, 1.0, 0.0), 0.02),
     "dadras": (_dadras, (1.1, 2.1, -2.0), 0.005),
+    "chen": (_chen, (-10.0, 0.0, 37.0), 0.002),
+    "fourwing": (_fourwing, (1.3, -0.18, 0.01), 0.02),
+    "arneodo": (_arneodo, (0.1, 0.06, 0.04), 0.01),
 }
 
 

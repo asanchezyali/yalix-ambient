@@ -29,7 +29,7 @@ AEOLIAN = (0, 2, 3, 5, 7, 8, 10)
 class Episode:
     number: int
     title: str
-    music: Spec
+    music: Spec  # or music_grunge.Spec
     visual: Visual
 
     @property
@@ -104,13 +104,13 @@ EPISODES = [
 ]  # fmt: skip
 
 
-def build_episode(ep: Episode) -> Path:
-    out_dir = OUTPUT / "series-v2"
+def build_episode(ep: Episode, folder: str = "series-v2", track=render_track) -> Path:
+    out_dir = OUTPUT / folder
     out_dir.mkdir(parents=True, exist_ok=True)
     wav, analysis = out_dir / f"{ep.slug}.wav", out_dir / f"{ep.slug}.json"
     silent, final = out_dir / f"{ep.slug}.silent.mp4", out_dir / f"{ep.slug}.mp4"
     t0 = time.time()
-    render_track(replace(ep.music, duration=DURATION), wav, analysis)
+    track(replace(ep.music, duration=DURATION), wav, analysis)
     render_video(analysis, silent, ep.visual)
     run(
         [
