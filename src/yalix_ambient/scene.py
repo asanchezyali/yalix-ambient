@@ -18,12 +18,11 @@ import json
 import os
 
 import numpy as np
-from manim import ManimColor, Scene, Text, ValueTracker, VGroup, VMobject, always_redraw, interpolate_color, linear
+from manim import ManimColor, Scene, ValueTracker, VGroup, VMobject, always_redraw, interpolate_color, linear
 
 BACKGROUND = "#000000"
 # Catppuccin Mocha accents
 PALETTE = ["#cba6f7", "#89b4fa", "#94e2d5", "#a6e3a1", "#f9e2af", "#fab387", "#f38ba8", "#b4befe"]
-SUBTEXT = "#585b70"
 
 # Eight closed figures, cycled bar by bar so the shapes keep changing.
 SHAPES = [(3, 2), (4, 3), (5, 4), (5, 3), (2, 1), (3, 4), (5, 6), (4, 5)]
@@ -95,8 +94,5 @@ class LissajousAmbient(Scene):
             curve(0.0, 1.0, 0.30, 8.0),  # soft glow
             curve(0.0, 1.0, 0.95, 2.2),  # main stroke
         )
-        mark = Text("yalix", font_size=22, color=SUBTEXT).to_corner(np.array([1, -1, 0]), buff=0.4)
-        mark.set_opacity(0.8)
-
-        self.add(layers, mark)
+        self.add(layers)
         self.play(t_tracker.animate.set_value(duration), run_time=duration, rate_func=linear)

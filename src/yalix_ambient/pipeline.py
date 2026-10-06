@@ -15,6 +15,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from yalix_ambient.gl_render import render_video
 from yalix_ambient.music import TrackSpec, render_track
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,7 +28,7 @@ def run(cmd: list[str], env: dict | None = None) -> None:
     subprocess.run(cmd, check=True, env=env)
 
 
-def build(minutes: float, seed: int, name: str, bpm: float = 72.0) -> Path:
+def build(minutes: float, seed: int, name: str, bpm: float = 72.0, engine: str = "gl") -> Path:
     OUTPUT.mkdir(exist_ok=True)
     wav = OUTPUT / f"{name}.wav"
     analysis = OUTPUT / f"{name}.json"
@@ -39,26 +40,30 @@ def build(minutes: float, seed: int, name: str, bpm: float = 72.0) -> Path:
     print(f"[1/3] music: {wav.name} ({time.time() - t0:.0f}s)")
 
     t1 = time.time()
-    env = {**os.environ, "YALIX_ANALYSIS": str(analysis)}
-    run(
-        [
-            "manim",
-            "-r",
-            "1920,1080",
-            "--fps",
-            str(spec.fps),
-            "--media_dir",
-            str(MEDIA),
-            "-o",
-            name,
-            "--progress_bar",
-            "none",
-            str(SCENE),
-            "LissajousAmbient",
-        ],
-        env=env,
-    )
-    silent = MEDIA / "videos" / "scene" / f"1080p{spec.fps}" / f"{name}.mp4"
+    if engine == "gl":
+        silent = OUTPUT / f"{name}.silent.mp4"
+        render_video(analysis, silent, fps=spec.fps)
+    else:
+        env = {**os.environ, "YALIX_ANALYSIS": str(analysis)}
+        run(
+            [
+                "manim",
+                "-r",
+                "1920,1080",
+                "--fps",
+                str(spec.fps),
+                "--media_dir",
+                str(MEDIA),
+                "-o",
+                name,
+                "--progress_bar",
+                "none",
+                str(SCENE),
+                "LissajousAmbient",
+            ],
+            env=env,
+        )
+        silent = MEDIA / "videos" / "scene" / f"1080p{spec.fps}" / f"{name}.mp4"
     print(f"[2/3] visuals: {silent.name} ({time.time() - t1:.0f}s)")
 
     t2 = time.time()
@@ -102,10 +107,11 @@ def main() -> None:
     p.add_argument("--seed", type=int, default=7)
     p.add_argument("--bpm", type=float, default=72.0)
     p.add_argument("--name", default="prototype")
+    p.add_argument("--engine", choices=["gl", "manim"], default="gl")
     a = p.parse_args()
     if not shutil.which("ffmpeg"):
         raise SystemExit("ffmpeg not found")
-    build(a.minutes, a.seed, a.name, a.bpm)
+    build(a.minutes, a.seed, a.name, a.bpm, a.engine)
 
 
 if __name__ == "__main__":
