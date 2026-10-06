@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 yalix-ambient = "yalix_ambient.pipeline:main"
+yalix-series = "yalix_ambient.series:main"
 
 [build-system]
 requires = ["hatchling"]
