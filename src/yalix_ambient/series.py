@@ -15,21 +15,21 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from yalix_ambient.gl_particles import Visual, render_video
-from yalix_ambient.music_series import SeriesSpec, render_track
+from yalix_ambient.music_v2 import Spec, render_track
 from yalix_ambient.pipeline import OUTPUT, run
 
 DURATION = 194.159  # 3:14
 
-INDUSTRIAL = ("bass", "wall", "bells", "noise")
-SYMPHONIC = ("choir", "strings", "timpani", "bass")
-MARCH = ("chug", "bass", "wall")
+PHRYGIAN = (0, 1, 3, 5, 7, 8, 10)
+HARMONIC_MINOR = (0, 2, 3, 5, 7, 8, 11)
+AEOLIAN = (0, 2, 3, 5, 7, 8, 10)
 
 
 @dataclass
 class Episode:
     number: int
     title: str
-    music: SeriesSpec
+    music: Spec
     visual: Visual
 
     @property
@@ -39,48 +39,73 @@ class Episode:
 
 
 EPISODES = [
+    # Industrial (Manson-like): 4/4 half-time, gritty saw riff with a minor-second sting, music-box bells.
     Episode(1, "Lorenz · Ashes",
-            SeriesSpec(bpm=74, roots=(40, 41, 40, 38), drums="halftime", layers=INDUSTRIAL, seed=101),
+            Spec(bpm=74, meters=(8,), roots=(40, 41, 40, 38), drums="halftime", bass_timbre="saw",
+                 bass_pattern=(1, 0, 1, 1, 0, 1, 1, 0), bass_notes=(0, 0, 0, 12, 0, 0, 7, 1),
+                 layers=("bass", "wall", "bells", "noise"), seed=101),
             Visual(system="lorenz", palette="ember", nebula="crimson", seed=11)),
+    # Symphonic (Nightwish-like): 6/8 lilt, harmonic minor, choir and strings over a clean sub.
     Episode(2, "Thomas · Cathedral of Ice",
-            SeriesSpec(bpm=66, roots=(45, 41, 43, 40), drums="sparse", layers=SYMPHONIC, seed=102),
+            Spec(bpm=72, meters=(6,), roots=(45, 41, 38, 40), scale=HARMONIC_MINOR, drums="sparse",
+                 bass_timbre="sub", bass_pattern=(1, 0, 0, 1, 0, 0), bass_notes=(0, 7), bass_drive=1.2,
+                 layers=("choir", "strings", "timpani", "bass"), reverb_s=5.0, seed=102),
             Visual(system="thomas", palette="ice", nebula="abyss", seed=12)),
+    # NDH march (Rammstein-like): square bass locked to a palm-muted gallop, E-F minor second.
     Episode(3, "Aizawa · Furnace",
-            SeriesSpec(bpm=82, roots=(40, 40, 43, 38), bars_per_chord=1, drums="march", layers=MARCH, seed=103),
+            Spec(bpm=84, meters=(8,), bars_per_chord=1, roots=(40, 40, 41, 40), drums="march",
+                 bass_timbre="square", bass_pattern=(1, 1, 0, 1, 1, 0, 1, 0), bass_notes=(0, 0, 0, 0, 1, 0),
+                 bass_cutoff=(400, 1400), layers=("chug", "bass", "wall"), seed=103),
             Visual(system="aizawa", palette="fire", nebula="inferno", seed=13)),
+    # Progressive (Tool-like): 7/8, tribal toms on Fibonacci accents, FM growl bass with tritones, clean delay guitar.
     Episode(4, "Dipoles · Static",
-            SeriesSpec(bpm=70, roots=(38, 39, 38, 36), drums="halftime", layers=INDUSTRIAL, bass_drive=3.4, seed=104),
+            Spec(bpm=78, meters=(7,), roots=(38, 38, 44, 38), drums="tribal", bass_timbre="fm", bass_hits=4,
+                 bass_notes=(0, 6, 0, 5, 3), fibonacci=True, arp_hits=4,
+                 layers=("bass", "arp", "drone", "noise"), seed=104),
             Visual(family="magnetic", dipoles=2, palette="toxic", nebula="venom", particles=9000, size=1.8,
                    trail=0.965, seed=14)),
+    # Symphonic doom: 5/4, octave-fuzz bass, choir, strings and timpani.
     Episode(5, "Halvorsen · Requiem",
-            SeriesSpec(bpm=64, roots=(43, 39, 41, 38), drums="sparse", layers=SYMPHONIC + ("wall",), seed=105),
+            Spec(bpm=64, meters=(10,), roots=(43, 39, 41, 38), scale=HARMONIC_MINOR, drums="sparse",
+                 bass_timbre="fuzz", bass_hits=3, bass_notes=(0, 7, 10), bass_drive=1.8,
+                 layers=("choir", "strings", "timpani", "bass", "wall"), seed=105),
             Visual(system="halvorsen", palette="aurora", nebula="void", particles=9000, seed=15)),
+    # Eerie waltz (Manson-like): 3/4, music box over a clean sub with a tritone, almost no drums.
     Episode(6, "Rössler · Music Box",
-            SeriesSpec(bpm=72, roots=(41, 42, 41, 39), drums="sparse", layers=("bass", "bells", "noise", "wall"),
-                       seed=106),
+            Spec(bpm=60, meters=(6,), roots=(42, 43, 42, 37), drums="sparse", bass_timbre="sub",
+                 bass_pattern=(1, 0, 0, 0, 1, 0), bass_notes=(0, 0, 6), bass_drive=1.4,
+                 layers=("bells", "bass", "noise", "drone"), seed=106),
             Visual(system="rossler", palette="blood", nebula="crimson", seed=16)),
+    # NDH anthem: driving octave saw bass, march, chug and choir in C# Phrygian.
     Episode(7, "Quadrupole · Iron",
-            SeriesSpec(bpm=84, roots=(40, 43, 38, 40), bars_per_chord=1, drums="march", layers=MARCH + ("choir",),
-                       seed=107),
+            Spec(bpm=88, meters=(8,), roots=(37, 37, 40, 35), drums="march", bass_timbre="saw",
+                 bass_pattern=(1, 0, 1, 0, 1, 0, 1, 1), bass_notes=(0, 12, 0, 12, 0, 12, 0, 10),
+                 bass_cutoff=(500, 1600), layers=("chug", "bass", "choir", "wall"), seed=107),
             Visual(family="magnetic", dipoles=4, palette="fire", nebula="inferno", particles=9000, size=1.8,
                    trail=0.965, seed=17)),
+    # Dark ambient: no drums, drone, choir and strings, a slow clean arpeggio far away.
     Episode(8, "Nebula · Choir of the Void",
-            SeriesSpec(bpm=60, roots=(45, 43, 41, 40), drums="none", layers=("choir", "strings", "bass"),
-                       reverb_s=5.5, seed=108),
+            Spec(bpm=54, meters=(8,), roots=(45, 43, 41, 40), scale=AEOLIAN, drums="none", bass_timbre="sub",
+                 bass_pattern=(1, 0, 0, 0, 0, 0, 0, 0), bass_notes=(0,), bass_drive=1.0, arp_hits=3,
+                 layers=("choir", "strings", "drone", "arp", "bass"), reverb_s=6.0, seed=108),
             Visual(family="flow", palette="aurora", nebula="void", particles=10000, size=1.8, trail=0.965, seed=18)),
+    # Progressive (Tool-like): 13/8, tribal toms, octave-fuzz riff with minor seconds and a tritone, chug.
     Episode(9, "Dadras · Machine",
-            SeriesSpec(bpm=78, roots=(38, 38, 39, 36), drums="halftime", layers=("bass", "chug", "noise", "bells"),
-                       seed=109),
+            Spec(bpm=84, meters=(13,), roots=(38, 38, 41, 37), drums="tribal", bass_timbre="fuzz", bass_hits=7,
+                 bass_notes=(0, 0, 3, 0, 1, 0, 6), fibonacci=True, arp_hits=5,
+                 layers=("bass", "chug", "arp", "noise"), seed=109),
             Visual(system="dadras", palette="toxic", nebula="venom", seed=19)),
+    # Finale: 9-8-7 cycling meter, tribal toms, square bass on Fibonacci accents, choir, strings, timpani.
     Episode(10, "Lorenz · Finale",
-            SeriesSpec(bpm=80, roots=(40, 36, 43, 38), drums="march",
-                       layers=("chug", "choir", "strings", "timpani", "bass", "wall"), seed=110),
+            Spec(bpm=76, meters=(9, 8, 7), bars_per_chord=3, roots=(40, 36, 43, 38), drums="tribal",
+                 bass_timbre="square", bass_hits=5, bass_notes=(0, 7, 0, 1, 10), fibonacci=True,
+                 layers=("bass", "chug", "choir", "strings", "timpani", "arp", "wall"), seed=110),
             Visual(system="lorenz", palette="blood", nebula="crimson", particles=9000, seed=20)),
 ]  # fmt: skip
 
 
 def build_episode(ep: Episode) -> Path:
-    out_dir = OUTPUT / "series"
+    out_dir = OUTPUT / "series-v2"
     out_dir.mkdir(parents=True, exist_ok=True)
     wav, analysis = out_dir / f"{ep.slug}.wav", out_dir / f"{ep.slug}.json"
     silent, final = out_dir / f"{ep.slug}.silent.mp4", out_dir / f"{ep.slug}.mp4"
