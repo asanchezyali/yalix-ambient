@@ -134,9 +134,9 @@ COMP_FS = """
 #version 330
 in vec2 uv; out vec4 frag;
 uniform sampler2D bg; uniform sampler2D trail; uniform sampler2D bloom;
-uniform float fade;
+uniform float fade; uniform float bloom_k;
 void main() {
-    vec3 c = texture(bg, uv).rgb + texture(trail, uv).rgb + texture(bloom, uv).rgb * 0.9;
+    vec3 c = texture(bg, uv).rgb + texture(trail, uv).rgb + texture(bloom, uv).rgb * bloom_k;
     c = 1.0 - exp(-c * 1.15);           // soft tone mapping
     c = pow(c, vec3(0.95));
     frag = vec4(c * fade, 1.0);
@@ -294,6 +294,7 @@ def render_video(analysis_path: Path, out_path: Path, fps: int = 30) -> None:
         fade_in = min(t / 3.0, 1.0)
         fade_out = min((duration - t) / 4.0, 1.0)
         comp_p["fade"].value = max(min(fade_in, fade_out), 0.0)
+        comp_p["bloom_k"].value = 0.9
         comp_vao.render(moderngl.TRIANGLE_STRIP)
         ff.stdin.write(out_fbo.read(components=3))
 

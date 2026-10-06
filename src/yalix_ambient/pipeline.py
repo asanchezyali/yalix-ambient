@@ -15,6 +15,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from yalix_ambient import gl_lorenz, music_dark
 from yalix_ambient.gl_render import render_video
 from yalix_ambient.music import TrackSpec, render_track
 
@@ -28,19 +29,26 @@ def run(cmd: list[str], env: dict | None = None) -> None:
     subprocess.run(cmd, check=True, env=env)
 
 
-def build(minutes: float, seed: int, name: str, bpm: float = 72.0, engine: str = "gl") -> Path:
+def build(minutes: float, seed: int, name: str, bpm: float = 72.0, engine: str = "gl", style: str = "ambient") -> Path:
     OUTPUT.mkdir(exist_ok=True)
     wav = OUTPUT / f"{name}.wav"
     analysis = OUTPUT / f"{name}.json"
     final = OUTPUT / f"{name}.mp4"
 
     t0 = time.time()
-    spec = TrackSpec(duration=minutes * 60, seed=seed, bpm=bpm)
-    render_track(spec, wav, analysis)
+    if style == "dark":
+        spec = music_dark.DarkSpec(duration=minutes * 60, seed=seed)
+        music_dark.render_track(spec, wav, analysis)
+    else:
+        spec = TrackSpec(duration=minutes * 60, seed=seed, bpm=bpm)
+        render_track(spec, wav, analysis)
     print(f"[1/3] music: {wav.name} ({time.time() - t0:.0f}s)")
 
     t1 = time.time()
-    if engine == "gl":
+    if style == "dark":
+        silent = OUTPUT / f"{name}.silent.mp4"
+        gl_lorenz.render_video(analysis, silent, fps=spec.fps)
+    elif engine == "gl":
         silent = OUTPUT / f"{name}.silent.mp4"
         render_video(analysis, silent, fps=spec.fps)
     else:
@@ -108,10 +116,11 @@ def main() -> None:
     p.add_argument("--bpm", type=float, default=72.0)
     p.add_argument("--name", default="prototype")
     p.add_argument("--engine", choices=["gl", "manim"], default="gl")
+    p.add_argument("--style", choices=["ambient", "dark"], default="ambient")
     a = p.parse_args()
     if not shutil.which("ffmpeg"):
         raise SystemExit("ffmpeg not found")
-    build(a.minutes, a.seed, a.name, a.bpm, a.engine)
+    build(a.minutes, a.seed, a.name, a.bpm, a.engine, a.style)
 
 
 if __name__ == "__main__":
