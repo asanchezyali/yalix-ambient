@@ -3,10 +3,11 @@
 Hallmarks synthesised here:
 - down-tuned heavy guitars (drop-D / E♭ register), double-tracked hard left and right, with
   bends and slides into riff notes; one amp (tanh) and cabinet per side, so notes interact;
-- a two-voice vocal harmony without lyrics: a lead line plus a second voice a diatonic third,
-  fourth or fifth away (or a fixed, dissonant interval), formant-synthesised with portamento,
-  delayed vibrato and vowel morphing. The verse and chorus melodies are composed once per
-  song and repeat, so every piece has its own hook;
+- a melody played by a singing lead guitar with a second guitar in harmony (twin guitars).
+  Notes on the beat sit on the chord that is sounding (the riff's chord in the verses) and the
+  harmony takes the next chord tone above, so the line never fights the band. The verse and
+  chorus melodies are composed once per song (A B A D, hook / answer), so each piece has a hook;
+  `sing` (formant vocals) stays available but is not used;
 - a wah lead (a band-pass that sweeps) over the solo section, or a cello lead when unplugged;
 - the acoustic side: fingerpicked and strummed steel strings (Karplus-Strong), cello, drone;
 - roomy rock drums with a big snare, crashes on section changes and tom fills;
@@ -79,6 +80,10 @@ class Spec:
     vowels: str = "aoea"
     layers: tuple[str, ...] = ("bass", "vocals", "lead")  # + acoustic cello drone rain
     lead_scale: tuple[int, ...] = PENTATONIC
+    riff_b: tuple[tuple[float, float, int, str], ...] | None = None  # turnaround; None -> walk-up
+    quiet_verse: bool = False  # Nirvana dynamics: clean verse, loud chorus
+    chorus_strum: str = "x.xxx.xo"  # x down, o up, m muted, . ring
+    chorus_strum_b: str | None = None  # every fourth bar
     reverb_s: float = 3.0
     seed: int = 1
     fps: int = 30
@@ -111,6 +116,11 @@ def crash(n: int, rng: np.random.Generator) -> np.ndarray:
     t = np.arange(n) / SR
     x = highpass(rng.standard_normal(n), 3000) * np.exp(-t * 1.8)
     return x + 0.5 * bandpass(rng.standard_normal(n), 5000, 12000) * np.exp(-t * 4)
+
+
+def open_hat(n: int, rng: np.random.Generator) -> np.ndarray:
+    t = np.arange(n) / SR
+    return highpass(rng.standard_normal(n), 6000) * np.exp(-t * 14)
 
 
 def ride(n: int, rng: np.random.Generator) -> np.ndarray:
@@ -294,7 +304,7 @@ def synthesize(spec: Spec) -> tuple[np.ndarray, dict]:
 
     def root_off(bar) -> int:
         _, _, name, i, _ = bar
-        if name in ("chorus",):
+        if name in ("chorus", "solo"):
             return spec.chorus_roots[(i // spec.chord_bars) % len(spec.chorus_roots)]
         if name == "bridge":
             return spec.bridge_roots[(i // spec.chord_bars) % len(spec.bridge_roots)]
@@ -307,6 +317,7 @@ def synthesize(spec: Spec) -> tuple[np.ndarray, dict]:
             buf[s : s + n] += x[:n] * gain
 
     gtr = [np.zeros(total), np.zeros(total)]  # rhythm guitars, hard L / R
+    clean = np.zeros(total)
     lead = np.zeros(total)
     bass_ev: list[tuple[float, float, int]] = []
     ac = np.zeros((total, 2))
@@ -314,118 +325,202 @@ def synthesize(spec: Spec) -> tuple[np.ndarray, dict]:
     drums, snare_bus, cym = np.zeros(total), np.zeros(total), np.zeros((total, 2))
     kicks: list[float] = []
     voice_lead, voice_harm = [], []
-    drone = np.zeros(total)
+    drone = np.zeros(total)  # kept for specs that ask for it
 
     base_v = spec.tonic + 12 * round((spec.voice_center - spec.tonic) / 12)
     S0 = spec.meter
-    verse_mel = compose_melody(rng, 4, S0, sub, (4, 7), 0)
-    chorus_mel = compose_melody(rng, 4, S0, sub, (3, 5), 4)
+    sec_len: dict[int, int] = {}
+    for bar in bars:
+        sec_len[bar[4]] = sec_len.get(bar[4], 0) + 1
+
+    # Melodies: verse A B A D and chorus hook / answer / hook / new answer, 8 bars each,
+    # so the hook comes back but no two halves are identical.
+    def phrase(dens, start):
+        return compose_melody(rng, 2, S0, sub, dens, start)
+
+    def shift(ph, by):
+        return [(b + by, s, ln, d) for b, s, ln, d in ph]
+
+    va, vb, vd = phrase((4, 7), 0), phrase((4, 7), 1), phrase((3, 5), 2)
+    verse_mel = va + shift(vb, 2) + shift(va, 4) + shift(vd, 6)
+    hook, ans1, ans2 = phrase((3, 5), 4), phrase((3, 6), 3), phrase((2, 4), 2)
+    chorus_mel = hook + shift(ans1, 2) + shift(hook, 4) + shift(ans2, 6)
     vowels = spec.vowels
+
+    # Riff A, and a turnaround B: same riff, last half bar replaced by a walk-up to the root.
+    cyc_steps = spec.riff_bars * S0
+    if spec.riff_b:
+        riff_b = spec.riff_b
+    else:
+        cut = cyc_steps - S0 // 2
+        walk = (-5, -3, -2, -1) if S0 // 2 >= 4 else (-2, -1)
+        ln_w = (S0 // 2) / len(walk)
+        riff_b = tuple((s_, min(ln, cut - s_), iv, a) for s_, ln, iv, a in spec.riff if s_ < cut) + tuple(
+            (cut + j * ln_w, ln_w, iv, "n" if j < len(walk) - 1 else "s") for j, iv in enumerate(walk))
+
+    def riff_chord(root, i, ls):
+        """The chord the riff is sitting on at this step (chords and landing notes, not passing notes)."""
+        riff = riff_b if (i // spec.riff_bars) % 4 == 3 else spec.riff
+        pos = (i % spec.riff_bars) * S0 + ls
+        cand = [e for e in riff if e[0] <= pos and e[3] in "pmvb"]
+        return root + (cand[-1][2] if cand else 0)
 
     def guitar(t0, dur, freqs, art, gain):
         for side in (0, 1):
-            jit = rng.normal(0, 0.006) if side else 0.0
+            jit = abs(rng.normal(0, 0.006)) if side else 0.0
             x = guitar_dry(freqs, dur, art, 6 + 4 * side, rng)
-            put(gtr[side], (t0 + max(jit, 0)) * SR, x, gain)
+            put(gtr[side], (t0 + jit) * SR, x, gain)
 
-    def pick_bar(t0, S, root, gain, strum=False):
+    def clean_note(t0, dur, freqs, gain):
+        put(clean, t0 * SR, guitar_dry(freqs, dur + 0.3, "n", 4, rng), gain)
+
+    def riff_bar(t0, S, root, i, gain, quiet):
+        cyc_i = i // spec.riff_bars
+        riff = riff_b if cyc_i % 4 == 3 else spec.riff
+        cyc = i % spec.riff_bars
+        for step, ln, iv, art in riff:
+            bi, ls = divmod(step, S0)
+            if bi != cyc or ls >= S:
+                continue
+            m = root + iv
+            if quiet:  # clean verse: chord tones ring instead of distorted power chords
+                third = third_of(m - spec.tonic)
+                freqs = [m + 12, m + 12 + third, m + 19] if art in ("p", "m") else [m + 12]
+                clean_note(t0 + ls * st, ln * st, [midi_to_hz(x) for x in freqs], 0.8)
+            else:
+                freqs = {"p": [m, m + 7, m + 12], "m": [m, m + 7, m + 12], "t": [m, m + 6]}.get(art, [m])
+                guitar(t0 + ls * st, ln * st * 0.95, [midi_to_hz(x) for x in freqs], art, gain)
+            bass_ev.append((t0 + ls * st, ln * st * 0.92, m - 12))
+
+    def strum_bar(t0, S, root, pat, gain, acoustic=False):
+        hits = [k for k, c in enumerate(pat[:S]) if c in "xom"]
         third = third_of(root - spec.tonic)
-        voicing = [root + 12, root + 19, root + 24, root + 24 + third, root + 31]
-        if strum:
-            for i in range(0, S, sub):
-                down = (i // sub) % 2 == 0
-                strings = voicing if down else voicing[::-1][:4]
-                for j, m in enumerate(strings):
-                    p = acoustic_pluck(midi_to_hz(m), int(1.6 * SR), rng)
-                    pan = 0.3 + 0.4 * j / len(strings)
-                    s = (t0 + i * st + j * 0.012) * SR
-                    g = gain * (0.16 if down else 0.10)
-                    put(ac[:, 0], s, p, g * (1 - pan))
-                    put(ac[:, 1], s, p, g * pan)
-            return
-        for k, h in enumerate(euclidean(min(6, S), S)):
-            if h:
-                m = voicing[(k * 2 + (k // 3)) % len(voicing)]
-                p = acoustic_pluck(midi_to_hz(m), int(2.2 * SR), rng)
-                pan = 0.25 + 0.5 * ((k * 3) % 5) / 4
-                put(ac[:, 0], (t0 + k * st) * SR, p, gain * 0.2 * (1 - pan))
-                put(ac[:, 1], (t0 + k * st) * SR, p, gain * 0.2 * pan)
+        for j, k in enumerate(hits):
+            end = hits[j + 1] if j + 1 < len(hits) else S
+            c = pat[k]
+            if acoustic:
+                voicing = [root + 12, root + 19, root + 24, root + 24 + third, root + 31]
+                strings = voicing if c == "x" else voicing[::-1][:3]
+                for q, m in enumerate(strings):
+                    p = acoustic_pluck(midi_to_hz(m), int((0.25 if c == "m" else 1.6) * SR), rng)
+                    pan = 0.3 + 0.4 * q / len(strings)
+                    g = gain * {"x": 0.16, "o": 0.10, "m": 0.07}[c]
+                    put(ac[:, 0], (t0 + k * st + q * 0.011) * SR, p, g * (1 - pan))
+                    put(ac[:, 1], (t0 + k * st + q * 0.011) * SR, p, g * pan)
+            else:
+                art = "m" if c == "m" else "p"
+                guitar(t0 + k * st, (end - k) * st * 0.97, [midi_to_hz(root + x) for x in (0, 7, 12)], art,
+                       gain * (1.0 if c == "x" else 0.85))  # fmt: skip
+
+    def pick_bar(t0, S, root, i, gain):
+        """Fingerpicking: alternating bass on the beats, treble notes between, a new figure each bar."""
+        third = third_of(root - spec.tonic)
+        treble = [root + 24, root + 24 + third, root + 31, root + 36]
+        for k in range(S):
+            if k % sub == 0:
+                m = root + 12 if (k // sub) % 2 == 0 else root + 19
+            else:
+                m = treble[(k + i) % len(treble)]
+                if rng.random() < 0.25:
+                    continue
+            p = acoustic_pluck(midi_to_hz(m), int(2.0 * SR), rng)
+            pan = 0.35 if k % sub == 0 else 0.65
+            put(ac[:, 0], (t0 + k * st) * SR, p, gain * 0.2 * (1 - pan))
+            put(ac[:, 1], (t0 + k * st) * SR, p, gain * 0.2 * pan)
+
+    LEAD_RHYTHMS = {  # (start, length) in eighths, rock-solo phrasing
+        8: [((0, 2), (2, 1), (3, 1), (4, 4)), ((0, 3), (3, 1), (4, 2), (6, 2)), ((1, 1), (2, 2), (4, 1), (5, 3)),
+            ((0, 6), (6, 1), (7, 1)), ((0, 1), (1, 1), (2, 1), (3, 1), (4, 4))],
+        12: [((0, 3), (3, 3), (6, 6)), ((0, 2), (2, 1), (3, 3), (6, 3), (9, 3)), ((0, 9), (9, 1), (10, 2))],
+        6: [((0, 3), (3, 3)), ((0, 2), (2, 1), (3, 3)), ((0, 6),)],
+    }  # fmt: skip
+    KICKS = {
+        8: {"verse": ("x...x...", "x..xx...", "x...x...", "x...x.x."),
+            "chorus": ("x..xx.x.", "x.xx..x.", "x..xx.x.", "x.x.x.xx"),
+            "bridge": ("x.....x.", "x.......", "x.....x.", "x...x...")},
+        12: {"verse": ("x......x....", "x.....x.x...", "x......x....", "x..x...x...."),
+             "chorus": ("x.....x.x...", "x..x..x.x...", "x.....x.x...", "x..x..x..xx."),
+             "bridge": ("x...........", "x.....x.....", "x...........", "x........x..")},
+        6: {"verse": ("x.....", "x..x..", "x.....", "x....x"),
+            "chorus": ("x..x..", "x.xx..", "x..x..", "x..x.x"),
+            "bridge": ("x.....", "x.....", "x.....", "x..x..")},
+    }  # fmt: skip
+    SNARES = {8: ("..x...x.", "....x..."), 12: ("...x.....x..", "......x....."), 6: ("...x..", "...x..")}
 
     # ---------------------------------------------------------------- bars
-    lead_deg = 0
+    lead_deg = 2
     n_bars = len(bars)
     for b, bar in enumerate(bars):
         t0, S, name, i, sec = bar
         nxt = bars[b + 1] if b + 1 < n_bars else None
         last_in_sec = nxt is None or nxt[4] != sec
+        n_sec = sec_len[sec]
         root = spec.tonic + root_off(bar)
         en = ENERGY[name]
         bar_dur = S * st
+        electric_verse = spec.verse in ("electric", "both")
+        quiet = spec.quiet_verse and name == "verse" and i < n_sec - 2
 
-        riff_now = (name in ("verse", "solo") and spec.verse in ("electric", "both")) or (
-            name in ("intro", "outro") and spec.intro == "riff")
-        if riff_now:
-            cyc = i % spec.riff_bars
-            for step, ln, iv, art in spec.riff:
-                bi, ls = divmod(step, S0)
-                if bi != cyc or ls >= S:
-                    continue
-                m = root + iv
-                freqs = {"p": [m, m + 7, m + 12], "m": [m, m + 7, m + 12], "t": [m, m + 6]}.get(art, [m])
-                guitar(t0 + ls * st, ln * st * 0.95, [midi_to_hz(x) for x in freqs], art, en)
-                bass_ev.append((t0 + ls * st, ln * st * 0.92, m - 12))
-        if name == "chorus" and spec.chorus in ("electric", "both"):
-            chord = [midi_to_hz(root + x) for x in (0, 7, 12)]
-            half = (S // 2 // sub) * sub or S
-            guitar(t0, half * st * 0.98, chord, "p", 1.0)
-            guitar(t0 + half * st, (S - half) * st * 0.98, chord, "p", 0.9)
-        if name in ("chorus", "solo", "verse") and not riff_now or name == "chorus":
-            for k in range(0, S, sub):  # bass pumps the beat when there is no riff to follow
-                if name == "verse" and k % (2 * sub):
-                    continue
-                bass_ev.append((t0 + k * st, sub * st * 0.9, root - 12))
+        if (name == "verse" and electric_verse) or (name in ("intro", "outro") and spec.intro == "riff"):
+            if name == "outro" and i >= n_sec - 2:
+                if i == n_sec - 2:  # last chord rings out
+                    guitar(t0, 2 * bar_dur, [midi_to_hz(spec.tonic + x) for x in (0, 7, 12)], "v", 1.0)
+                    bass_ev.append((t0, 2 * bar_dur, spec.tonic - 12))
+            else:
+                intro_clean = name == "intro" and spec.quiet_verse and i < n_sec // 2
+                riff_bar(t0, S, root, i, en, quiet or intro_clean)
+        if name in ("chorus", "solo") and spec.chorus in ("electric", "both"):
+            pat = spec.chorus_strum_b if i % 4 == 3 and spec.chorus_strum_b else spec.chorus_strum
+            strum_bar(t0, S, root, pat, 1.0 if name == "chorus" else 0.8)
+        if name in ("chorus", "solo") or (name == "verse" and not electric_verse):
+            nxt_root = spec.tonic + root_off(nxt) if nxt is not None else root
+            for k in range(0, S, 1 if name != "verse" else sub):  # driving eighths, passing note into the change
+                m = root - 12
+                if k == S - 1 and nxt_root != root:
+                    m = nxt_root - 12 + (1 if nxt_root < root else -1)
+                bass_ev.append((t0 + k * st, st * 0.9 if name != "verse" else sub * st * 0.9, m))
         if name == "bridge":
             bass_ev.append((t0, bar_dur * 0.95, root - 12))
-            if spec.chorus != "acoustic" and "acoustic" not in L:
-                guitar(t0, bar_dur * 0.98, [midi_to_hz(root + x) for x in (0, 7, 12)], "v", 0.45)
+            third = third_of(root - spec.tonic)
+            arp = [root + 12, root + 19, root + 24, root + 12 + third + 12, root + 19, root + 24]
+            for k in range(0, S, 1):  # clean arpeggio, a new order each bar
+                if "acoustic" in L:
+                    break
+                m = arp[(k * (1 + i % 2)) % len(arp)]
+                clean_note(t0 + k * st, st * 2, [midi_to_hz(m)], 0.55)
 
         acoustic_now = (
             (name == "verse" and spec.verse in ("acoustic", "both"))
             or (name in ("intro", "outro") and spec.intro == "acoustic")
             or (name == "bridge" and "acoustic" in L)
-            or (name == "solo" and spec.verse == "acoustic")
         )
         if acoustic_now:
-            pick_bar(t0, S, root, 1.0 if spec.verse == "acoustic" else 0.7)
-        if name == "chorus" and spec.chorus in ("acoustic", "both"):
-            pick_bar(t0, S, root, 1.0, strum=True)
+            pick_bar(t0, S, root, i, 1.0 if spec.verse == "acoustic" else 0.6)
+        if name in ("chorus", "solo") and spec.chorus in ("acoustic", "both"):
+            pat = spec.chorus_strum_b if i % 4 == 3 and spec.chorus_strum_b else spec.chorus_strum
+            strum_bar(t0, S, root, pat, 1.0 if spec.chorus == "acoustic" else 0.6, acoustic=True)
 
-        if "cello" in L and name in ("chorus", "bridge", "outro") and i % spec.chord_bars == 0:
+        if "cello" in L and name in ("chorus", "bridge") and i % spec.chord_bars == 0:
             third = third_of(root - spec.tonic)
-            line = (root + 12, root + 12 + third, root + 19)
-            m = line[(i // spec.chord_bars) % 3]
+            line = (root + 12, root + 12 + third, root + 19, root + 12 + third)
+            m = line[(i // spec.chord_bars) % 4]
             x = cello(midi_to_hz(m), spec.chord_bars * bar_dur * 0.98, rng) * 0.12
             put(vc[:, 0], t0 * SR, x, 0.55)
             put(vc[:, 1], t0 * SR, x, 0.45)
 
-        if ("drone" in L or spec.intro == "drone") and name in ("intro", "bridge", "outro") and i % 2 == 0:
-            n = int(2 * bar_dur * SR) + SR
-            tt = np.arange(n) / SR
-            f0 = midi_to_hz(spec.tonic - 12)
-            x = lowpass(sum(2 * ((f0 * r * tt * (1 + d)) % 1) - 1 for r in (1, 1.5, 2) for d in (-0.002, 0.002)), 400)
-            put(drone, t0 * SR, x * _env(n, 1.5, 1.5), 0.05)
-
-        # Lead: wah guitar when plugged in, cello when unplugged.
+        # Lead over the chorus chords: rock phrasing, bends and vibrato; cello when unplugged.
         if name == "solo" and "lead" in L:
-            hits = euclidean(int(rng.integers(3, 6)), S, int(rng.integers(0, 3)))
-            on = [k for k, h in enumerate(hits) if h]
-            for j, k in enumerate(on):
-                end = on[j + 1] if j + 1 < len(on) else S
+            rhythms = LEAD_RHYTHMS.get(S, LEAD_RHYTHMS[8])
+            for k, ln in rhythms[int(rng.integers(0, len(rhythms)))]:
+                if k >= S:
+                    continue
                 lead_deg = int(np.clip(lead_deg + rng.choice([-2, -1, 1, 1, 2, 3]), 0, 9))
+                if i == n_sec - 1 and k == 0:
+                    lead_deg = len(spec.lead_scale)  # end the solo on the octave
                 o, q = divmod(lead_deg, len(spec.lead_scale))
                 m = spec.tonic + 24 + 12 * o + spec.lead_scale[q]
-                dur = (end - k) * st * 0.95
-                if spec.verse == "acoustic":
+                dur = min(ln, S - k) * st * 0.95
+                if spec.verse == "acoustic" and spec.chorus == "acoustic":
                     x = cello(midi_to_hz(m), dur + 0.2, rng) * 0.16
                     put(vc[:, 0], (t0 + k * st) * SR, x, 0.4)
                     put(vc[:, 1], (t0 + k * st) * SR, x, 0.6)
@@ -438,93 +533,115 @@ def synthesize(spec: Spec) -> tuple[np.ndarray, dict]:
             if name in ("verse", "chorus"):
                 mel = verse_mel if name == "verse" else chorus_mel
                 for mb, step, ln, deg in mel:
-                    if mb != i % 4 or step >= S:
+                    if mb != i % 8 or step >= S:
                         continue
                     ts, d = t0 + step * st, ln * st
                     m = deg_midi(base_v, deg)
-                    tones = {(root + x) % 12 for x in (0, third_of(root - spec.tonic), 7)}
-                    if ln >= 2 * sub and m % 12 not in tones:  # long notes settle on the chord
+                    chord_r = riff_chord(root, i, step) if name == "verse" and electric_verse else root
+                    third = third_of(chord_r - spec.tonic)
+                    tones = {(chord_r + x) % 12 for x in (0, third, 7)}
+                    if (step % sub == 0 or ln >= 2 * sub) and m % 12 not in tones:  # strong notes sit on the chord
                         for dm in (-1, 1, -2, 2):
                             if (m + dm) % 12 in tones:
                                 m += dm
                                 break
                     v = vowels[(step + mb) % len(vowels)]
                     voice_lead.append((ts, d, m, v, 1.0))
-                    if name == "chorus" or (name == "verse" and i % 4 >= 2 and sec >= 3):
-                        h = m + spec.harmony_semi if spec.harmony_semi is not None else deg_midi(base_v, deg + spec.harmony)
+                    if name == "chorus" or (name == "verse" and i % 8 >= 4 and sec >= 3):
+                        if m % 12 in tones:  # the next chord tone above: always consonant
+                            h = next(m + k for k in range(1, 9) if (m + k) % 12 in tones)
+                        elif spec.harmony_semi is not None and (m + spec.harmony_semi - spec.tonic) % 12 in sc:
+                            h = m + spec.harmony_semi
+                        else:
+                            h = deg_midi(base_v, deg + 2)
                         voice_harm.append((ts, d, h, v, 0.8))
-            elif name in ("bridge", "outro") and i % 2 == 0 and (name == "bridge" or i < 4):
+            elif name == "bridge" and i % 2 == 0:
                 third = third_of(root - spec.tonic)
-                m = base_v + ((root - spec.tonic) % 12) + (0 if name == "bridge" else 7)
+                m = base_v + ((root - spec.tonic) % 12)
                 if m > spec.voice_center + 7:
                     m -= 12
                 d = 2 * bar_dur * 0.9
                 voice_lead.append((t0 + 0.1, d, m, "u", 0.7))
                 voice_harm.append((t0 + 0.1, d, m + (third if spec.harmony_semi is None else spec.harmony_semi), "o", 0.6))
-            elif name == "intro" and spec.intro == "drone" and i >= 2 and i % 2 == 0:
-                voice_lead.append((t0, 2 * bar_dur * 0.9, base_v, "u", 0.6))
 
-        # Drums.
+        # Drums: per-section grooves with bar-to-bar variation, ghost notes, crashes and fills.
         drums_on = spec.drums != "none" and (
-            name in ("verse", "chorus", "solo", "bridge") or (name == "outro" and spec.intro == "riff" and i < 4))
+            name in ("verse", "chorus", "solo", "bridge") or (name == "outro" and spec.intro == "riff" and i < n_sec - 2))
         if drums_on:
-            style = spec.drums
-            if name == "bridge":
-                style = "brush" if style == "brush" else "halftime"
-            soft = 0.6 if name == "bridge" else 1.0
-            kp, sp = spec.kick_pat, spec.snare_pat
-            if style == "halftime" or style == "sludge" or kp is None or name == "bridge":
-                kp, sp = {
-                    "rock": ("x..xx...", "..x...x."),
-                    "halftime": ("x.....x.", "....x..."),
-                    "sludge": ("x..x....", "....x..."),
-                    "shuffle": ("x......x....", "...x.....x.."),
-                    "brush": ("x...x...", "..x...x."),
-                }.get(style, ("x..xx...", "..x...x."))
-                if len(kp) != S:  # odd meters without an explicit pattern
-                    kp = "".join("x" if k in (0, S // 2) else "." for k in range(S))
-                    sp = "".join("x" if k in (int(S * 0.3), int(S * 0.78)) else "." for k in range(S))
+            Sk = S if S in KICKS else 8
+            part = "chorus" if name in ("chorus", "solo") else "bridge" if name == "bridge" else "verse"
+            soft = 0.6 if name == "bridge" else 0.85 if quiet else 1.0
+            kp = KICKS[Sk][part][i % 4]
+            sp = SNARES[Sk][1 if name == "bridge" else 0]
+            fill = "big" if last_in_sec and name != "outro" else "small" if i % 4 == 3 else None
+            fill_from = S - (S // 2 if fill == "big" else S // 4) if fill else S
             for k, c in enumerate(kp[:S]):
-                if c == "x":
+                if c == "x" and k < fill_from:
                     put(drums, (t0 + k * st) * SR, kick_g(int(0.5 * SR), rng), 0.55 * soft)
                     kicks.append(t0 + k * st)
-            fill = last_in_sec and name != "outro" and S >= 6
             for k, c in enumerate(sp[:S]):
-                if c == "x" and not (fill and k >= S - 3):
-                    if style == "brush":
-                        put(snare_bus, (t0 + k * st) * SR, brush(int(0.4 * SR), rng), 0.35 * soft)
-                    else:
-                        put(snare_bus, (t0 + k * st) * SR, snare_g(int(0.6 * SR), rng), 0.33 * soft)
-            # cymbals
-            if style == "brush":
-                for k in range(0, S, sub):
-                    put(snare_bus, (t0 + k * st) * SR, brush(int(0.3 * SR), rng), 0.08)
-            elif style == "sludge" or (name == "chorus" and style != "shuffle"):
+                if k >= fill_from:
+                    continue
+                if c == "x":
+                    g = 0.33 * soft
+                    put(snare_bus, (t0 + k * st) * SR, (brush if spec.drums == "brush" else snare_g)(int(0.6 * SR), rng), g)
+                elif name == "verse" and k % sub and rng.random() < 0.18:  # ghost note
+                    put(snare_bus, (t0 + k * st) * SR, snare_g(int(0.2 * SR), rng), 0.05)
+            if name in ("chorus", "solo"):  # open hats, crash every four bars
+                for k in range(0, min(S, fill_from)):
+                    put(cym[:, 1], (t0 + k * st) * SR, open_hat(int(0.35 * SR), rng), 0.045 if k % sub == 0 else 0.03)
+            elif name == "bridge":
                 for k in range(0, S, sub):
                     r = ride(int(0.8 * SR), rng)
-                    put(cym[:, 0], (t0 + k * st) * SR, r, 0.05)
-                    put(cym[:, 1], (t0 + k * st) * SR, r, 0.07)
+                    put(cym[:, 0], (t0 + k * st) * SR, r, 0.04)
+                    put(cym[:, 1], (t0 + k * st) * SR, r, 0.05)
             else:
-                pattern = range(S) if style != "shuffle" else [k for k in range(S) if k % 3 != 1]
+                pattern = [k for k in range(S) if not (S == 12 and k % 3 == 1)]
                 for k in pattern:
-                    acc = 1.0 if k % sub == 0 else 0.6
-                    put(cym[:, 1], (t0 + k * st) * SR, hat(int(0.1 * SR), rng), 0.05 * acc * soft)
-            if i == 0 and name in ("chorus", "solo", "verse"):
+                    if k < fill_from:
+                        acc = 1.0 if k % sub == 0 else 0.6
+                        put(cym[:, 1], (t0 + k * st) * SR, hat(int(0.1 * SR), rng), 0.05 * acc * soft)
+            if (i == 0 and name in ("chorus", "solo", "verse")) or (name in ("chorus", "solo") and i % 4 == 0):
                 c = crash(int(2.5 * SR), rng)
-                put(cym[:, 0], t0 * SR, c, 0.16)
-                put(cym[:, 1], t0 * SR, c, 0.10)
-            if fill:  # tom fill into the next section
-                for j, k in enumerate(range(S - 3, S)):
-                    tm = tom((175, 128, 92)[j], int(0.6 * SR), rng)
-                    pan = (0.7, 0.5, 0.3)[j]
-                    put(cym[:, 0], (t0 + k * st) * SR, tm, 0.35 * (1 - pan))
-                    put(cym[:, 1], (t0 + k * st) * SR, tm, 0.35 * pan)
-        elif name == "intro" and i == len([x for x in bars if x[4] == sec]) - 1 and spec.drums != "none":
-            for j, k in enumerate(range(max(S - 4, 0), S)):  # roll in
-                put(snare_bus, (t0 + k * st) * SR, snare_g(int(0.4 * SR), rng), 0.12 + 0.06 * j)
+                put(cym[:, 0], t0 * SR, c, 0.16 if i == 0 else 0.11)
+                put(cym[:, 1], t0 * SR, c, 0.10 if i == 0 else 0.07)
+                put(drums, t0 * SR, kick_g(int(0.5 * SR), rng), 0.3)
+            if fill:
+                kind = int(rng.integers(0, 3)) if fill == "big" else 3
+                hits = np.arange(fill_from, S, 0.5)  # sixteenths
+                for j, k in enumerate(hits):
+                    ts = (t0 + k * st) * SR
+                    if kind == 0:  # toms, high to low
+                        f = (190, 150, 118, 92)[min(int(j * 4 / len(hits)), 3)]
+                        tm = tom(f, int(0.5 * SR), rng)
+                        pan = 0.75 - 0.5 * j / max(len(hits) - 1, 1)
+                        put(cym[:, 0], ts, tm, 0.32 * (1 - pan))
+                        put(cym[:, 1], ts, tm, 0.32 * pan)
+                    elif kind == 1:  # snare roll, crescendo
+                        put(snare_bus, ts, snare_g(int(0.3 * SR), rng), 0.12 + 0.2 * j / len(hits))
+                    elif kind == 2:  # snare and floor tom, alternating
+                        if j % 2:
+                            tm = tom(92, int(0.5 * SR), rng)
+                            put(cym[:, 0], ts, tm, 0.12)
+                            put(cym[:, 1], ts, tm, 0.2)
+                        else:
+                            put(snare_bus, ts, snare_g(int(0.3 * SR), rng), 0.25)
+                    elif j % 2 == 0 or j == len(hits) - 1:  # small pickup on the snare
+                        put(snare_bus, ts, snare_g(int(0.3 * SR), rng), 0.18)
+        elif name == "intro" and i == n_sec - 1 and spec.drums != "none":
+            for j, k in enumerate(np.arange(S // 2, S, 0.5)):  # roll in
+                put(snare_bus, (t0 + k * st) * SR, snare_g(int(0.3 * SR), rng), 0.08 + 0.2 * j / S)
 
     # ---------------------------------------------------------------- buses
     mix = np.zeros((total, 2))
+
+    if clean.any():  # clean guitar: light breakup, chorus (modulated delay) on the right side
+        t_all = np.arange(total) / SR
+        x = lowpass(np.tanh(1.6 * clean) / 1.6, 5000)
+        delay = (0.012 + 0.003 * np.sin(2 * np.pi * 0.8 * t_all)) * SR
+        wet = np.interp(np.arange(total) - delay, np.arange(total), x, left=0.0)
+        mix[:, 0] += 0.16 * x + 0.05 * wet
+        mix[:, 1] += 0.08 * x + 0.13 * wet
 
     if any(g.any() for g in gtr):
         t_all = np.arange(total) / SR
@@ -562,16 +679,22 @@ def synthesize(spec: Spec) -> tuple[np.ndarray, dict]:
         bass = lowpass(np.tanh(2.2 * bass), 1100) * 0.36
         mix += bass[:, None]
 
+    # The melody is played, not sung: a singing lead guitar, and a second guitar in harmony.
     vocal = np.zeros((total, 2))
-    if voice_lead:
-        a = sing(voice_lead, total, np.random.default_rng(spec.seed + 1))
-        b = sing([(t + 0.012, d, m, v, g) for t, d, m, v, g in voice_lead], total, np.random.default_rng(spec.seed + 2), 7)
-        vocal[:, 0] += 0.20 * a + 0.12 * b
-        vocal[:, 1] += 0.12 * a + 0.20 * b
-    if voice_harm:
-        h = sing(voice_harm, total, np.random.default_rng(spec.seed + 3), -5)
-        vocal[:, 0] += 0.09 * h
-        vocal[:, 1] += 0.17 * h
+    for events, gain, pan, seed in ((voice_lead, 1.0, 0.42, 1), (voice_harm, 0.75, 0.62, 3)):
+        if not events:
+            continue
+        mrng = np.random.default_rng(spec.seed + seed)
+        x = np.zeros(total)
+        for ts, d, m, v, g in events:
+            art = "b" if mrng.random() < 0.15 and d > 0.3 else "v"
+            put(x, ts * SR, guitar_dry([midi_to_hz(m + 12)], d + 0.15, art, 2, mrng), g)
+        y = lowpass(np.tanh(2.5 * lowpass(x, 3500)) / 2.5, 4200) * 0.55 * gain
+        dly = int(3 * st * SR)
+        echo = np.zeros(total)
+        echo[dly:] = lowpass(y[:-dly], 2200) * 0.3
+        vocal[:, 0] += (1 - pan) * y + pan * echo
+        vocal[:, 1] += pan * y + (1 - pan) * echo
 
     kick_bus = drums
     mix += kick_bus[:, None] + 0.45 * np.stack([snare_bus, snare_bus], axis=1) + cym
