@@ -30,7 +30,10 @@ from yalix_ambient.music_v2 import bass_tone, ks_pluck, tom
 AEOLIAN = (0, 2, 3, 5, 7, 8, 10)
 DORIAN = (0, 2, 3, 5, 7, 9, 10)
 PHRYGIAN = (0, 1, 3, 5, 7, 8, 10)
+MIXOLYDIAN = (0, 2, 4, 5, 7, 9, 10)
+IONIAN = (0, 2, 4, 5, 7, 9, 11)
 PENTATONIC = (0, 3, 5, 7, 10)
+MAJOR_PENTATONIC = (0, 2, 4, 7, 9)
 
 VOWELS = {
     "a": ((730, 1.0), (1090, 0.5), (2440, 0.22)),
@@ -75,6 +78,7 @@ class Spec:
     voice_center: int = 55  # lead vocal register (MIDI)
     vowels: str = "aoea"
     layers: tuple[str, ...] = ("bass", "vocals", "lead")  # + acoustic cello drone rain
+    lead_scale: tuple[int, ...] = PENTATONIC
     reverb_s: float = 3.0
     seed: int = 1
     fps: int = 30
@@ -418,8 +422,8 @@ def synthesize(spec: Spec) -> tuple[np.ndarray, dict]:
             for j, k in enumerate(on):
                 end = on[j + 1] if j + 1 < len(on) else S
                 lead_deg = int(np.clip(lead_deg + rng.choice([-2, -1, 1, 1, 2, 3]), 0, 9))
-                o, q = divmod(lead_deg, len(PENTATONIC))
-                m = spec.tonic + 24 + 12 * o + PENTATONIC[q]
+                o, q = divmod(lead_deg, len(spec.lead_scale))
+                m = spec.tonic + 24 + 12 * o + spec.lead_scale[q]
                 dur = (end - k) * st * 0.95
                 if spec.verse == "acoustic":
                     x = cello(midi_to_hz(m), dur + 0.2, rng) * 0.16
