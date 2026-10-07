@@ -37,6 +37,9 @@ from yalix_ambient.series import EPISODES as DARK
 OVERLAP = 6.0  # seconds of crossfade and morph between themes
 N_POINTS = 9000
 FPS = 30
+# YouTube re-encodes at a few Mbps with colour at half resolution: thin dim particles turn to
+# mush. Brighter, slightly thicker particles and a bit more glow survive it (tested 7-oct).
+GAIN, GROW, GLOW = 1.6, 1.35, 0.15
 SCALE = 4 / 3  # render at 2560 x 1440: YouTube serves 1440p uploads with a better codec, even at 1080p
 
 # Nine more dark themes, so an hour never repeats a figure.
@@ -373,7 +376,7 @@ def render_mix_video(episodes: list[Episode], analysis: dict, starts: list[float
     cyber = any(e.visual.style == "cyber" for e in episodes)
     rd = Renderer(out, N_POINTS, cyber=cyber, fps=FPS, scale=SCALE)
     glitches: dict[int, np.ndarray] = {}
-    boost, bloom_add = (1.45, 0.25) if cyber else (1.0, 0.0)
+    boost, bloom_add = (1.45 * GAIN / 1.25, 0.25 + GLOW) if cyber else (GAIN, GLOW)
     scenes: dict[int, Scene] = {}
     pairing: dict[int, tuple[np.ndarray, np.ndarray]] = {}
     delay = np.random.default_rng(7).uniform(0, 0.35, N_POINTS)  # particles leave at slightly different times
@@ -430,7 +433,7 @@ def render_mix_video(episodes: list[Episode], analysis: dict, starts: list[float
             glitches.pop(j - 1, None)
             sx, sy, col, size = a
         rd.frame(
-            np.column_stack([sx, sy, col, size]),
+            np.column_stack([sx, sy, col, size * GROW]),
             t=t, nebula=nebula, level=level, bg_level=0.4 * level + 0.6 * bass_l,
             intensity=intensity * boost * (1 + 0.35 * level + 0.25 * kick_l), decay=decay, bloom=bloom + bloom_add,
             fade=max(min(t / 4.0, (duration - t) / 6.0, 1.0), 0.0), kick=kick_l,
