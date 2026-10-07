@@ -14,6 +14,7 @@ dependencies = [
 yalix-ambient = "yalix_ambient.pipeline:main"
 yalix-series = "yalix_ambient.series:main"
 yalix-grunge = "yalix_ambient.grunge:main"
+yalix-cyberpunk = "yalix_ambient.cyberpunk:main"
 
 [build-system]
 requires = ["hatchling"]

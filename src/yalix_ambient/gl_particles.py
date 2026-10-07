@@ -44,6 +44,16 @@ PALETTES = {
     "rain": [[0.40, 0.55, 0.75], [0.70, 0.80, 0.90], [0.25, 0.35, 0.55], [0.55, 0.75, 0.80]],
     "nicotine": [[0.85, 0.70, 0.30], [0.95, 0.85, 0.55], [0.60, 0.40, 0.15], [0.75, 0.55, 0.35]],
     "ash": [[0.70, 0.68, 0.65], [0.90, 0.85, 0.80], [0.45, 0.45, 0.50], [0.80, 0.55, 0.40]],
+    # cyberpunk: saturated neon that reads well over near-black
+    "neon": [[1.00, 0.10, 0.75], [0.10, 0.90, 1.00], [0.55, 0.20, 1.00], [1.00, 0.35, 0.55]],
+    "matrix": [[0.10, 1.00, 0.35], [0.60, 1.00, 0.60], [0.00, 0.55, 0.25], [0.85, 1.00, 0.85]],
+    "chrome": [[0.60, 0.90, 1.00], [0.90, 0.95, 1.00], [0.30, 0.55, 0.95], [0.75, 0.60, 1.00]],
+    "synthwave": [[1.00, 0.30, 0.60], [1.00, 0.60, 0.15], [0.60, 0.20, 0.90], [0.20, 0.60, 1.00]],
+    "laser": [[1.00, 0.10, 0.20], [0.20, 0.40, 1.00], [1.00, 0.45, 0.75], [0.40, 0.90, 1.00]],
+    "glacier": [[0.20, 0.80, 1.00], [0.50, 0.50, 1.00], [0.85, 0.95, 1.00], [0.10, 0.50, 0.90]],
+    "vapor": [[1.00, 0.55, 0.85], [0.35, 0.95, 0.90], [0.75, 0.60, 1.00], [1.00, 0.80, 0.55]],
+    "acid": [[0.80, 1.00, 0.10], [1.00, 0.20, 0.80], [0.10, 0.90, 0.70], [1.00, 0.90, 0.30]],
+    "sunset": [[1.00, 0.45, 0.20], [1.00, 0.20, 0.55], [0.55, 0.15, 0.75], [1.00, 0.75, 0.35]],
 }
 NEBULAE = {
     "crimson": [[0.16, 0.01, 0.04], [0.10, 0.02, 0.15], [0.04, 0.01, 0.08], [0.14, 0.02, 0.09]],
@@ -56,6 +66,10 @@ NEBULAE = {
     "dusk": [[0.09, 0.04, 0.13], [0.04, 0.03, 0.10], [0.12, 0.04, 0.08], [0.05, 0.05, 0.12]],
     "slate": [[0.04, 0.07, 0.12], [0.06, 0.06, 0.09], [0.02, 0.04, 0.07], [0.07, 0.09, 0.12]],
     "smoke": [[0.08, 0.08, 0.09], [0.11, 0.08, 0.06], [0.04, 0.04, 0.05], [0.09, 0.09, 0.11]],
+    "night": [[0.05, 0.01, 0.12], [0.01, 0.04, 0.10], [0.10, 0.01, 0.08], [0.02, 0.02, 0.06]],
+    "neonfog": [[0.12, 0.02, 0.10], [0.02, 0.06, 0.12], [0.06, 0.01, 0.12], [0.01, 0.08, 0.10]],
+    "terminal": [[0.01, 0.07, 0.03], [0.00, 0.03, 0.02], [0.02, 0.05, 0.05], [0.00, 0.04, 0.01]],
+    "ultraviolet": [[0.08, 0.00, 0.14], [0.03, 0.00, 0.08], [0.12, 0.02, 0.10], [0.04, 0.02, 0.12]],
 }
 
 # ------------------------------------------------------------------ attractors
@@ -115,8 +129,37 @@ def _arneodo(p):
     return np.stack([y, z, 5.5 * x - 3.5 * y - z - x**3], axis=1)
 
 
+def _lu(p):
+    x, y, z = p.T
+    a, b, c = 36.0, 3.0, 20.0
+    return np.stack([a * (y - x), -x * z + c * y, x * y - b * z], axis=1)
+
+
+def _burke_shaw(p):
+    x, y, z = p.T
+    s, v = 10.0, 4.272
+    return np.stack([-s * (x + y), -y - s * x * z, s * x * y + v], axis=1)
+
+
+def _sprott(p):
+    # Sprott (2014): a strange attractor that coexists with invariant tori.
+    x, y, z = p.T
+    a, b = 2.07, 1.79
+    return np.stack([y + a * x * y + x * z, 1 - b * x * x + y * z, x - x * x - y * y], axis=1)
+
+
+def _rucklidge(p):
+    x, y, z = p.T
+    k, a = 2.0, 6.7
+    return np.stack([-k * x + a * y - y * z, x, -z + y * y], axis=1)
+
+
 ATTRACTORS = {
     # name: (derivative, start, integration dt for sampling)
+    "lu": (_lu, (0.1, 0.3, -0.6), 0.002),
+    "burke_shaw": (_burke_shaw, (0.6, 0.0, 0.0), 0.002),
+    "sprott": (_sprott, (0.63, 0.47, -0.54), 0.005),
+    "rucklidge": (_rucklidge, (1.0, 0.0, 4.5), 0.005),
     "lorenz": (_lorenz, (1.0, 1.0, 20.0), 0.005),
     "thomas": (_thomas, (0.1, 0.0, -0.1), 0.05),
     "aizawa": (_aizawa, (0.1, 0.0, 0.0), 0.01),
@@ -185,6 +228,36 @@ class Visual:
     size: float = 2.0
     bloom: float = 0.35
     seed: int = 3
+    style: str = "default"  # default | cyber (scanlines, chromatic aberration, glitch bursts)
+
+
+# Cyberpunk composite: same tone mapping as COMP_FS, plus RGB split that opens on the kick,
+# CRT scanlines, a vignette and short horizontal-slice glitches.
+CYBER_COMP_FS = """
+#version 330
+in vec2 uv; out vec4 frag;
+uniform sampler2D bg; uniform sampler2D trail; uniform sampler2D bloom;
+uniform float fade; uniform float bloom_k;
+uniform float t; uniform float kick; uniform float glitch; uniform vec2 res;
+float hash(float n) { return fract(sin(n) * 43758.5453); }
+vec3 scene(vec2 p) {
+    return texture(bg, p).rgb + texture(trail, p).rgb + texture(bloom, p).rgb * bloom_k;
+}
+void main() {
+    vec2 p = uv;
+    float band = floor(p.y * 36.0) + floor(t * 15.0) * 7.0;
+    float h = hash(band);
+    if (h > 1.0 - 0.35 * glitch) p.x += (hash(band + 1.7) - 0.5) * 0.06 * glitch;
+    vec2 dir = p - 0.5;
+    float ca = 0.0012 + 0.0045 * kick + 0.008 * glitch;
+    vec3 c = vec3(scene(p + dir * ca).r, scene(p).g, scene(p - dir * ca).b);
+    c = 1.0 - exp(-c * 1.15);
+    c = pow(c, vec3(0.95));
+    c *= 0.90 + 0.10 * sin(p.y * res.y * 3.14159);
+    c *= 1.0 - 0.35 * dot(dir, dir) * 2.0;
+    frag = vec4(c * fade, 1.0);
+}
+"""
 
 
 # ------------------------------------------------------------------ renderer
@@ -238,7 +311,18 @@ def render_video(analysis_path: Path, out_path: Path, vis: Visual, fps: int = 30
     bg_p, bg_vao = prog(BG_FS)
     trail_p, trail_vao = prog(TRAIL_FS)
     blur_p, blur_vao = prog(BLUR_FS)
-    comp_p, comp_vao = prog(COMP_FS)
+    cyber = vis.style == "cyber"
+    comp_p, comp_vao = prog(CYBER_COMP_FS if cyber else COMP_FS)
+    if cyber:
+        comp_p["res"].value = (W, H)
+        # Glitch bursts: a few frames long, rare, and only where the music is already loud.
+        glitch = np.zeros(n_frames)
+        g_rng = np.random.default_rng(vis.seed + 7)
+        k_ = int(4 * fps)
+        while k_ < n_frames - 5 * fps:
+            k_ += int(g_rng.uniform(5, 12) * fps)
+            span = int(g_rng.integers(3, 8))
+            glitch[k_ : k_ + span] = np.linspace(1.0, 0.3, len(glitch[k_ : k_ + span]))
     pt_p = ctx.program(vertex_shader=POINT_VS, fragment_shader=POINT_FS)
     pt_buf = ctx.buffer(reserve=N * 6 * 4)
     pt_vao = ctx.vertex_array(pt_p, [(pt_buf, "2f 3f 1f", "in_pos", "in_color", "in_size")])
@@ -328,7 +412,8 @@ def render_video(analysis_path: Path, out_path: Path, vis: Visual, fps: int = 30
         cur_fbo.clear(0, 0, 0, 1)
         ctx.enable(moderngl.BLEND)
         ctx.blend_func = moderngl.ONE, moderngl.ONE
-        pt_p["intensity"].value = vis.intensity * (1 + 0.35 * level + 0.25 * kick_l)
+        boost = 1.45 if cyber else 1.0  # neon should glow, not smoulder
+        pt_p["intensity"].value = vis.intensity * boost * (1 + 0.35 * level + 0.25 * kick_l)
         pt_vao.render(moderngl.POINTS)
         ctx.disable(moderngl.BLEND)
 
@@ -356,7 +441,11 @@ def render_video(analysis_path: Path, out_path: Path, vis: Visual, fps: int = 30
         blur_b[0].use(2)
         comp_p["bg"].value, comp_p["trail"].value, comp_p["bloom"].value = 0, 1, 2
         comp_p["fade"].value = max(min(t / 4.0, (duration - t) / 5.0, 1.0), 0.0)
-        comp_p["bloom_k"].value = vis.bloom
+        comp_p["bloom_k"].value = vis.bloom + (0.25 if cyber else 0.0)
+        if cyber:
+            comp_p["t"].value = t
+            comp_p["kick"].value = kick_l
+            comp_p["glitch"].value = float(glitch[k]) * (0.4 + 0.6 * level)
         comp_vao.render(moderngl.TRIANGLE_STRIP)
         ff.stdin.write(out_fbo.read(components=3))
 

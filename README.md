@@ -18,6 +18,18 @@ uv sync
 uv run yalix-ambient --minutes 3 --name video01   # output/video01.mp4
 ```
 
+Series of ten episodes at 3:14 each, one figure per episode and no repeats inside a series:
+
+```bash
+uv run yalix-series       # dark: industrial, symphonic and progressive metal styles
+uv run yalix-grunge       # grunge: Seattle-style songs, twin lead guitars
+uv run yalix-cyberpunk    # cyberpunk: synthwave and darksynth, neon palettes, scanlines and glitch
+```
+
+The cyberpunk music (`music_cyberpunk.py`) uses supersaw pads that pump under the kick, a sixteenth-note
+arpeggio whose filter opens over the song, a pulse-wave lead, gated-reverb snares and four bass types
+(rolling, pulse, reese, FM). Its visuals add four attractors: Sprott, Burke-Shaw, Lü and Rucklidge.
+
 Render speed at 1080p30: GPU engine ~0.5× the video length (3 min in ~1.5 min); Manim ~4×.
 
 Next: more visual families (harmonograph, Fourier epicycles, vector fields), more progressions and
