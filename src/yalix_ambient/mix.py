@@ -24,6 +24,7 @@ from scipy.io import wavfile
 from yalix_ambient.gl_particles import Renderer, Scene, Visual, glitch_schedule
 from yalix_ambient import music_cyberpunk as cp
 from yalix_ambient.cyberpunk import EPISODES as CYBER
+from yalix_ambient.hacker import EPISODES as HACKER
 from yalix_ambient.music import SR
 from yalix_ambient.music_v2 import Spec, render_track
 from yalix_ambient.pipeline import OUTPUT, run
@@ -33,6 +34,7 @@ from yalix_ambient.series import EPISODES as DARK
 OVERLAP = 6.0  # seconds of crossfade and morph between themes
 N_POINTS = 9000
 FPS = 30
+SCALE = 4 / 3  # render at 2560 x 1440: YouTube serves 1440p uploads with a better codec, even at 1080p
 
 # Nine more dark themes, so an hour never repeats a figure.
 DARK_EXTRA = [
@@ -148,9 +150,74 @@ _CYBER = {e.number: e for e in CYBER + CYBER_EXTRA}
 # Calm start, energy through the middle, no two neighbouring themes with the same groove.
 CYBER_ORDER = [1, 11, 3, 17, 4, 14, 7, 15, 5, 12, 2, 16, 18, 8, 13, 6, 10, 9, 19]
 
+# Nine more dark steampunk hacker themes: the attractors the series had not used (Sprott, Lü,
+# Burke-Shaw, Rucklidge, Chen, Aizawa, Halvorsen, Lorenz) plus a three-pole field, and two
+# grooves it lacked (four-on-the-floor, trap). Typing in 13 and 17, a typewriter in 15.
+HACKER_EXTRA = [
+    Episode(11, "Cold Boot",
+            cp.Spec(bpm=68, tonic=40, scale=cp.AEOLIAN, progression=(0, 5, 0, 3), chord_bars=4, groove="none",
+                    bass="sub", pad="drone", lead="bell", arp="pluck", arp_rate=8, arp_shape="pendulum",
+                    texture=("servers",), form="ambient", lead_density=3, reverb_s=5.5, seed=611),
+            Visual(system="sprott", palette="greenterm", nebula="terminal", style="cyber", orbit=0.5, sway=10,
+                   speed=0.6, hue_speed=0.6, glitch=0.1, scanlines=0.9, chroma=0.4, seed=91)),
+    Episode(12, "Kernel Panic",
+            cp.Spec(bpm=128, tonic=42, scale=cp.PHRYGIAN, progression=(0, 1, 0, 6), groove="break", swing=0.1,
+                    bass="reese", pad="none", lead="acid", arp="square", arp_shape="random", texture=("modem",),
+                    form="club", lead_density=8, stutter=0.7, seed=612),
+            Visual(system="lu", palette="redalert", nebula="redroom", style="cyber", sway=25, speed=1.4,
+                   hue_speed=1.8, glitch=1.0, chroma=1.3, seed=92)),
+    Episode(13, "Steam Shell",
+            cp.Spec(bpm=120, tonic=45, scale=cp.DORIAN, progression=(0, 3, 4, 3), groove="four", pump=0.35,
+                    bass="rolling", pad="strings", lead="square", arp="square", arp_shape="updown",
+                    texture=("steam", "typing"), form="build", lead_density=6, seed=613),
+            Visual(system="burke_shaw", palette="copper", nebula="furnace", style="cyber", orbit=0.5, sway=15,
+                   speed=1.1, glitch=0.3, scanlines=0.7, seed=93)),
+    Episode(14, "Phreaker",
+            cp.Spec(bpm=112, tonic=43, scale=cp.DORIAN, progression=(0, 4, 3, 1), groove="electro", bass="fm",
+                    pad="glass", lead="chip", arp="chip", arp_rate=16, arp_shape="up", texture=("radio",),
+                    form="pulse", lead_density=7, stutter=0.3, seed=614),
+            Visual(system="rucklidge", palette="phosphor", nebula="blackout", style="cyber", sway=20, speed=1.2,
+                   glitch=0.6, scanlines=1.0, chroma=0.8, seed=94)),
+    Episode(15, "Difference Engine",
+            cp.Spec(bpm=82, tonic=38, scale=cp.HARMONIC_MINOR, progression=(0, 5, 3, 4), groove="halftime",
+                    pump=0.15, bass="808", pad="choir", lead="bell", arp="pluck", arp_rate=12, arp_shape="pendulum",
+                    texture=("typewriter", "clockwork"), form="anthem", lead_density=5, reverb_s=4.5, seed=615),
+            Visual(family="magnetic", dipoles=3, palette="brass", nebula="soot", particles=9000, size=1.8,
+                   trail=0.965, style="cyber", speed=0.9, glitch=0.2, scanlines=0.4, chroma=0.4, seed=95)),
+    Episode(16, "Brute Force",
+            cp.Spec(bpm=140, tonic=41, scale=cp.AEOLIAN, progression=(0, 6, 5, 4), groove="trap", bass="808",
+                    pad="supersaw", lead="saw", arp="square", arp_rate=16, arp_shape="updown",
+                    texture=("servers",), form="club", lead_density=7, stutter=0.5, seed=616),
+            Visual(system="chen", palette="bluescreen", nebula="night", style="cyber", sway=30, zoom=0.3,
+                   speed=1.5, hue_speed=1.5, glitch=0.9, chroma=1.2, seed=96)),
+    Episode(17, "Night Shift",
+            cp.Spec(bpm=84, tonic=44, scale=cp.AEOLIAN, progression=(0, 5, 3, 6), sevenths=True, groove="downtempo",
+                    swing=0.25, bass="sub", pad="glass", lead="vox", arp="bell", arp_rate=8, arp_shape="random",
+                    texture=("rain", "typing"), form="slowburn", lead_density=4, reverb_s=5.0, seed=617),
+            Visual(system="aizawa", palette="monochrome", nebula="slate", style="cyber", orbit=0.5, sway=10,
+                   speed=0.7, hue_speed=0.5, glitch=0.1, scanlines=0.6, chroma=0.3, trail=0.97, seed=97)),
+    Episode(18, "Lockpick",
+            cp.Spec(bpm=96, tonic=40, scale=cp.LYDIAN, progression=(0, 1, 4, 1), groove="idm", bass="seq",
+                    pad="drone", lead="pluck", arp="square", arp_rate=16, arp_shape="random",
+                    texture=("clockwork",), form="loop", lead_density=7, stutter=0.6, seed=618),
+            Visual(system="halvorsen", palette="verdigris", nebula="patina", style="cyber", sway=20, speed=1.1,
+                   glitch=0.5, chroma=0.9, seed=98)),
+    Episode(19, "Logout",
+            cp.Spec(bpm=60, tonic=45, scale=cp.AEOLIAN, progression=(0, 5, 3, 4), chord_bars=4, groove="heartbeat",
+                    bass="sub", pad="choir", lead="sine", arp="pluck", arp_rate=8, arp_shape="pendulum",
+                    texture=("radio",), form="slowburn", lead_density=3, reverb_s=6.0, seed=619),
+            Visual(system="lorenz", palette="ash", nebula="smoke", style="cyber", orbit=0.5, sway=10, speed=0.6,
+                   hue_speed=0.5, glitch=0.0, scanlines=0.5, chroma=0.3, trail=0.97, seed=99)),
+]  # fmt: skip
+
+_HACKER = {e.number: e for e in HACKER + HACKER_EXTRA}
+# A cold start, the middle alternating heavy and quiet, drum & bass near the end, a heartbeat to log out.
+HACKER_ORDER = [11, 1, 17, 2, 13, 3, 14, 5, 12, 7, 16, 9, 18, 6, 15, 4, 8, 10, 19]
+
 MIXES = {
     "dark": ([_BY_NUMBER[n] for n in DARK_ORDER], render_track),
     "cyberpunk": ([_CYBER[n] for n in CYBER_ORDER], cp.render_track),
+    "hackers": ([_HACKER[n] for n in HACKER_ORDER], cp.render_track),
 }
 
 
@@ -220,7 +287,7 @@ def render_mix_video(episodes: list[Episode], analysis: dict, starts: list[float
     rms, bass, kick = (np.array(analysis[k]) for k in ("rms", "bass", "kick"))
     n_frames = int(duration * FPS)
     cyber = any(e.visual.style == "cyber" for e in episodes)
-    rd = Renderer(out, N_POINTS, cyber=cyber, fps=FPS)
+    rd = Renderer(out, N_POINTS, cyber=cyber, fps=FPS, scale=SCALE)
     glitches: dict[int, np.ndarray] = {}
     boost, bloom_add = (1.45, 0.25) if cyber else (1.0, 0.0)
     scenes: dict[int, Scene] = {}
@@ -304,7 +371,7 @@ def build(name: str) -> Path:
         [
             "ffmpeg", "-v", "error", "-y", "-i", str(silent), "-i", str(wav),
             "-map", "0:v", "-map", "1:a", "-c:v", "copy",
-            "-af", "loudnorm=I=-16:TP=-1.5:LRA=9", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+            "-af", "loudnorm=I=-16:TP=-1.5:LRA=9", "-c:a", "aac", "-b:a", "384k", "-ar", "48000",
             "-shortest", "-movflags", "+faststart", str(final),
         ]
     )  # fmt: skip

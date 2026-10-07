@@ -394,8 +394,11 @@ class Scene:
 class Renderer:
     """The GPU pipeline: nebula background -> additive points -> feedback trail -> bloom -> composite."""
 
-    def __init__(self, out_path: Path, n_points: int, cyber: bool = False, fps: int = 30) -> None:
-        self.cyber, self.k = cyber, 0
+    def __init__(self, out_path: Path, n_points: int, cyber: bool = False, fps: int = 30, scale: float = 1.0) -> None:
+        # Scenes place points in W x H pixels; scale > 1 renders the same frame at a higher
+        # resolution (1.333 -> 2560 x 1440) with points and bloom grown to match.
+        self.cyber, self.k, self.scale = cyber, 0, scale
+        ow, oh = round(W * scale), round(H * scale)
         ctx = self.ctx = moderngl.create_standalone_context(require=330)
         ctx.enable(moderngl.PROGRAM_POINT_SIZE)
         quad = ctx.buffer(np.array([-1, -1, 1, -1, -1, 1, 1, 1], dtype="f4"))
@@ -409,7 +412,7 @@ class Renderer:
         self.blur = prog(BLUR_FS)
         self.comp = prog(CYBER_COMP_FS if cyber else COMP_FS)
         if cyber:
-            self.comp[0]["res"].value = (W, H)
+            self.comp[0]["res"].value = (ow, oh)
         self.pt_p = ctx.program(vertex_shader=POINT_VS, fragment_shader=POINT_FS)
         self.pt_buf = ctx.buffer(reserve=n_points * 6 * 4)
         self.pt_vao = ctx.vertex_array(self.pt_p, [(self.pt_buf, "2f 3f 1f", "in_pos", "in_color", "in_size")])
@@ -419,18 +422,18 @@ class Renderer:
             tex.filter = (moderngl.LINEAR, moderngl.LINEAR)
             return tex, ctx.framebuffer([tex])
 
-        self.bg_t = target(W, H)
-        self.cur = target(W, H)
-        self.trails = [target(W, H), target(W, H)]
-        self.hw, self.hh = W // 2, H // 2
+        self.bg_t = target(ow, oh)
+        self.cur = target(ow, oh)
+        self.trails = [target(ow, oh), target(ow, oh)]
+        self.hw, self.hh = ow // 2, oh // 2
         self.blur_a, self.blur_b = target(self.hw, self.hh), target(self.hw, self.hh)
-        self.out_fbo = ctx.framebuffer([ctx.texture((W, H), 3)])
-        self.bg[0]["res"].value = (W, H)
+        self.out_fbo = ctx.framebuffer([ctx.texture((ow, oh), 3)])
+        self.bg[0]["res"].value = (ow, oh)
         self.pt_p["res"].value = (W, H)
         self.ff = subprocess.Popen(
             [
                 "ffmpeg", "-v", "error", "-y",
-                "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(fps), "-i", "-",
+                "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{ow}x{oh}", "-r", str(fps), "-i", "-",
                 "-vf", "vflip", "-c:v", "libx264", "-preset", "medium", "-crf", "17", "-pix_fmt", "yuv420p",
                 str(out_path),
             ],
@@ -441,6 +444,9 @@ class Renderer:
               intensity: float, decay: float, bloom: float, fade: float, kick: float = 0.0,
               cyber_params: tuple[float, float, float] = (0.0, 0.0, 0.0)) -> None:
         ctx = self.ctx
+        if self.scale != 1.0:
+            points = points.copy()
+            points[:, 5] *= self.scale
         self.pt_buf.write(points.astype(np.float32).tobytes())
         bg_p, bg_vao = self.bg
         bg_p["t"].value = t
@@ -471,11 +477,11 @@ class Renderer:
         self.blur_a[1].use()
         next_tex.use(0)
         bl_p["src"].value = 0
-        bl_p["dir"].value = (2.0 / self.hw, 0.0)
+        bl_p["dir"].value = (2.0 * self.scale / self.hw, 0.0)
         bl_vao.render(moderngl.TRIANGLE_STRIP)
         self.blur_b[1].use()
         self.blur_a[0].use(0)
-        bl_p["dir"].value = (0.0, 2.0 / self.hh)
+        bl_p["dir"].value = (0.0, 2.0 * self.scale / self.hh)
         bl_vao.render(moderngl.TRIANGLE_STRIP)
 
         cp, c_vao = self.comp
