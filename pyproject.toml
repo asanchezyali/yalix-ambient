@@ -15,6 +15,8 @@ yalix-ambient = "yalix_ambient.pipeline:main"
 yalix-series = "yalix_ambient.series:main"
 yalix-grunge = "yalix_ambient.grunge:main"
 yalix-cyberpunk = "yalix_ambient.cyberpunk:main"
+yalix-hacker = "yalix_ambient.hacker:main"
+yalix-mix = "yalix_ambient.mix:main"
 
 [build-system]
 requires = ["hatchling"]
