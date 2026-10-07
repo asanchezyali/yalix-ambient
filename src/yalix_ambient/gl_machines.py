@@ -125,3 +125,7 @@ class Clockwork:
 
 
 MACHINES = {"rain": CodeRain, "graph": PacketGraph, "clockwork": Clockwork}
+
+from yalix_ambient.gl_cosmos import COSMOS  # noqa: E402
+
+MACHINES.update(COSMOS)

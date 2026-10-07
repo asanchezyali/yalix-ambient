@@ -232,7 +232,7 @@ def dipole_field(xy: np.ndarray, t: float, n_dipoles: int, seed: int) -> np.ndar
 
 @dataclass
 class Visual:
-    family: str = "attractor"  # attractor | magnetic | flow | rain | graph | clockwork
+    family: str = "attractor"  # attractor | magnetic | flow | rain | graph | clockwork | orbits | galaxy | harmonograph | map | spirograph
     system: str = "lorenz"
     dipoles: int = 2
     palette: str = "ember"

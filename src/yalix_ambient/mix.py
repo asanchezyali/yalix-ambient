@@ -27,6 +27,7 @@ from yalix_ambient.cyberpunk import EPISODES as CYBER
 from yalix_ambient.hacker import EPISODES as HACKER
 from yalix_ambient.grunge import EPISODES as GRUNGE
 from yalix_ambient import music_grunge as gr
+from yalix_ambient.deepspace import EPISODES as DEEP
 from yalix_ambient.music import SR
 from yalix_ambient.music_v2 import Spec, render_track
 from yalix_ambient.pipeline import OUTPUT, run
@@ -289,11 +290,18 @@ _GRUNGE = {e.number: e for e in GRUNGE + GRUNGE_EXTRA}
 # Brushes to open, fast and slow songs alternating, the two anthems to close.
 GRUNGE_ORDER = [11, 1, 15, 3, 12, 5, 2, 14, 4, 7, 16, 9, 18, 13, 6, 17, 8, 19, 10]
 
+
+def any_engine(spec, wav: Path, js: Path) -> None:
+    """Deep Space alternates engines: pick the renderer from the spec's type."""
+    (cp.render_track if isinstance(spec, cp.Spec) else render_track)(spec, wav, js)
+
+
 MIXES = {
     "dark": ([_BY_NUMBER[n] for n in DARK_ORDER], render_track),
     "cyberpunk": ([_CYBER[n] for n in CYBER_ORDER], cp.render_track),
     "hackers": ([_HACKER[n] for n in HACKER_ORDER], cp.render_track),
     "grunge": ([_GRUNGE[n] for n in GRUNGE_ORDER], gr.render_track),
+    "deepspace": (DEEP, any_engine),
 }
 
 
