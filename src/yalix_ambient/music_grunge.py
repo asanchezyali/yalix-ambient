@@ -573,6 +573,11 @@ def synthesize(spec: Spec) -> tuple[np.ndarray, dict]:
             soft = 0.6 if name == "bridge" else 0.85 if quiet else 1.0
             kp = KICKS[Sk][part][i % 4]
             sp = SNARES[Sk][1 if name == "bridge" else 0]
+            if spec.drums in ("halftime", "sludge") and S == 8:  # snare on 3 only, the kick leaves room
+                sp = "....x..."
+                kp = (("x.......", "x..x....", "x.......", "x.x...x.") if spec.drums == "sludge"
+                      else ("x.......", "x.....x.", "x..x....", "x.....x."))[i % 4]  # fmt: skip
+            kp, sp = spec.kick_pat or kp, spec.snare_pat or sp
             fill = "big" if last_in_sec and name != "outro" else "small" if i % 4 == 3 else None
             fill_from = S - (S // 2 if fill == "big" else S // 4) if fill else S
             for k, c in enumerate(kp[:S]):

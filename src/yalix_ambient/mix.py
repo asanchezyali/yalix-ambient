@@ -25,6 +25,8 @@ from yalix_ambient.gl_particles import Renderer, Scene, Visual, glitch_schedule
 from yalix_ambient import music_cyberpunk as cp
 from yalix_ambient.cyberpunk import EPISODES as CYBER
 from yalix_ambient.hacker import EPISODES as HACKER
+from yalix_ambient.grunge import EPISODES as GRUNGE
+from yalix_ambient import music_grunge as gr
 from yalix_ambient.music import SR
 from yalix_ambient.music_v2 import Spec, render_track
 from yalix_ambient.pipeline import OUTPUT, run
@@ -214,10 +216,84 @@ _HACKER = {e.number: e for e in HACKER + HACKER_EXTRA}
 # A cold start, the middle alternating heavy and quiet, drum & bass near the end, a heartbeat to log out.
 HACKER_ORDER = [11, 1, 17, 2, 13, 3, 14, 5, 12, 7, 16, 9, 18, 6, 15, 4, 8, 10, 19]
 
+# Nine more grunge songs: the drum feels the series had not used (brushes, sludge, half-time,
+# none), drone and rain layers, Aeolian and Phrygian keys, and figures it had not shown.
+GRUNGE_EXTRA = [
+    Episode(11, "Rain Dog",
+            gr.Spec(bpm=92, meter=6, subdiv=3, tonic=41, scale=gr.IONIAN, verse="acoustic", chorus="acoustic",
+                    intro="acoustic", chorus_roots=(0, 7, 5, 9), chord_bars=1, chorus_strum="x..x.o", drums="brush",
+                    voice_center=60, lead_scale=gr.MAJOR_PENTATONIC,
+                    layers=("bass", "vocals", "lead", "acoustic", "rain"), reverb_s=2.8, seed=711),
+            Visual(system="lu", palette="ice", nebula="slate", sway=15, seed=51)),
+    Episode(12, "Sludge Tide",
+            gr.Spec(bpm=72, tonic=38, scale=gr.PHRYGIAN, drive=7.5, quiet_verse=True,
+                    riff=((0, 3, 0, "p"), (3, 1, 1, "b"), (4, 2, 0, "m"), (6, 2, -2, "s")),
+                    chorus_roots=(0, 1, -2, 0), chord_bars=1, chorus_strum="x...x.x.", drums="sludge",
+                    voice_center=58, layers=("bass", "vocals", "lead", "drone"), reverb_s=3.0, seed=712),
+            Visual(system="rucklidge", palette="blood", nebula="crimson", sway=20, seed=52)),
+    Episode(13, "Halfway Home",
+            gr.Spec(bpm=100, tonic=43, scale=gr.MIXOLYDIAN, drive=5.5, verse="both", intro="acoustic",
+                    riff=((0, 2, 0, "p"), (2, 1, 5, "n"), (3, 1, 7, "n"), (4, 2, 10, "b"), (6, 2, 7, "p")),
+                    chorus_roots=(0, -2, 5, 0), chord_bars=1, chorus_strum="x.x.x.xo", drums="halftime",
+                    voice_center=62, lead_scale=gr.MAJOR_PENTATONIC, layers=("bass", "vocals", "lead", "acoustic"),
+                    reverb_s=2.6, seed=713),
+            Visual(system="sprott", palette="moss", nebula="swamp", orbit=0.5, sway=10, seed=53)),
+    Episode(14, "Feedback Loop",
+            gr.Spec(bpm=132, tonic=40, scale=gr.AEOLIAN, drive=6.5, quiet_verse=True, wah="riff",
+                    riff=((0, 1, 0, "m"), (1, 1, 0, "m"), (2, 1, 3, "n"), (3, 1, 5, "p"), (4, 2, 7, "b"),
+                          (6, 1, 5, "n"), (7, 1, 3, "n")),
+                    chorus_roots=(0, 8, 3, 10), chord_bars=1, chorus_strum="xxxxxxxx", chorus_strum_b="x.x.xxxx",
+                    drums="rock", voice_center=61, layers=("bass", "vocals", "lead"), reverb_s=2.2, seed=714),
+            Visual(system="burke_shaw", palette="toxic", nebula="venom", speed=1.2, seed=54)),
+    Episode(15, "Driftwood",
+            gr.Spec(bpm=108, tonic=45, scale=gr.IONIAN, verse="acoustic", chorus="acoustic", intro="acoustic",
+                    chorus_roots=(0, 5, 9, 7), chord_bars=1, chorus_strum="x.xo.oxo", chorus_strum_b="x.xox.xx",
+                    drums="brush", voice_center=63, lead_scale=gr.MAJOR_PENTATONIC,
+                    layers=("bass", "vocals", "lead", "acoustic", "cello"), reverb_s=2.6, seed=715),
+            Visual(family="magnetic", dipoles=2, palette="sunset", nebula="dusk", particles=9000, size=1.8,
+                   trail=0.965, seed=55)),
+    Episode(16, "Undertow",
+            gr.Spec(bpm=90, meter=12, subdiv=3, tonic=40, scale=gr.DORIAN, verse="acoustic", chorus="both",
+                    intro="acoustic", chorus_roots=(0, 5, 3, 7), chord_bars=1, chorus_strum="x..x..x.ox..",
+                    drums="shuffle", drive=5.5, voice_center=60, layers=("bass", "vocals", "lead", "acoustic"),
+                    reverb_s=2.8, seed=716),
+            Visual(system="rossler", palette="glacier", nebula="abyss", sway=15, orbit=0.5, seed=56)),
+    Episode(17, "Fault Line",
+            gr.Spec(bpm=140, tonic=42, scale=gr.MIXOLYDIAN, drive=6.5, quiet_verse=True, riff_bars=2,
+                    riff=((0, 1, 0, "m"), (1, 1, 0, "m"), (2, 2, 3, "b"), (4, 1, 0, "m"), (5, 1, 5, "n"),
+                          (6, 2, 7, "p"), (8, 2, 10, "b"), (10, 2, 7, "p"), (12, 4, 0, "v")),
+                    chorus_roots=(0, -2, 5, 7), chord_bars=1, chorus_strum="x.xxx.xx", drums="rock",
+                    voice_center=62, lead_scale=gr.MAJOR_PENTATONIC, layers=("bass", "vocals", "lead"),
+                    reverb_s=2.0, seed=717),
+            Visual(family="magnetic", dipoles=4, palette="brass", nebula="sepia", particles=9000, size=1.8,
+                   trail=0.965, seed=57)),
+    Episode(18, "Grey Harbor",
+            gr.Spec(bpm=80, tonic=38, scale=gr.AEOLIAN, verse="acoustic", chorus="acoustic", intro="acoustic",
+                    chorus_roots=(0, 8, 3, 10), chord_bars=2, chorus_strum="x...x.xo", drums="none",
+                    voice_center=58, layers=("bass", "vocals", "lead", "acoustic", "cello", "drone", "rain"),
+                    reverb_s=3.2, seed=718),
+            Visual(family="graph", palette="verdigris", nebula="smoke", size=1.7, trail=0.97, seed=58)),
+    Episode(19, "Long Way Down",
+            gr.Spec(bpm=124, tonic=40, scale=gr.IONIAN, riff_bars=2, drive=6.0, verse="both", chorus="both",
+                    intro="acoustic", chord_bars=1,
+                    riff=((0, 2, 0, "p"), (2, 2, 4, "p"), (4, 2, 7, "p"), (6, 2, 9, "b"),
+                          (8, 3, 5, "p"), (11, 1, 4, "n"), (12, 4, 2, "v")),
+                    chorus_roots=(0, 5, 9, 7), chorus_strum="x.xxx.xo", chorus_strum_b="x.x.xxxx", drums="rock",
+                    voice_center=62, lead_scale=gr.MAJOR_PENTATONIC, layers=("bass", "vocals", "lead", "acoustic"),
+                    reverb_s=2.6, seed=719),
+            Visual(family="magnetic", dipoles=5, palette="copper", nebula="void", particles=9000, size=1.8,
+                   trail=0.965, seed=59)),
+]  # fmt: skip
+
+_GRUNGE = {e.number: e for e in GRUNGE + GRUNGE_EXTRA}
+# Brushes to open, fast and slow songs alternating, the two anthems to close.
+GRUNGE_ORDER = [11, 1, 15, 3, 12, 5, 2, 14, 4, 7, 16, 9, 18, 13, 6, 17, 8, 19, 10]
+
 MIXES = {
     "dark": ([_BY_NUMBER[n] for n in DARK_ORDER], render_track),
     "cyberpunk": ([_CYBER[n] for n in CYBER_ORDER], cp.render_track),
     "hackers": ([_HACKER[n] for n in HACKER_ORDER], cp.render_track),
+    "grunge": ([_GRUNGE[n] for n in GRUNGE_ORDER], gr.render_track),
 }
 
 
