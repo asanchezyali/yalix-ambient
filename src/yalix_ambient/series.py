@@ -96,11 +96,12 @@ EPISODES = [
                  layers=("bass", "chug", "arp", "noise"), seed=109),
             Visual(system="dadras", palette="toxic", nebula="venom", seed=19)),
     # Finale: 9-8-7 cycling meter, tribal toms, square bass on Fibonacci accents, choir, strings, timpani.
-    Episode(10, "Lorenz · Finale",
+    # Arneodo, not Lorenz: episode 1 already uses Lorenz and the finale looked like a repeat.
+    Episode(10, "Arneodo · Finale",
             Spec(bpm=76, meters=(9, 8, 7), bars_per_chord=3, roots=(40, 36, 43, 38), drums="tribal",
                  bass_timbre="square", bass_hits=5, bass_notes=(0, 7, 0, 1, 10), fibonacci=True,
                  layers=("bass", "chug", "choir", "strings", "timpani", "arp", "wall"), seed=110),
-            Visual(system="lorenz", palette="blood", nebula="crimson", particles=9000, seed=20)),
+            Visual(system="arneodo", palette="blood", nebula="crimson", particles=9000, seed=20)),
 ]  # fmt: skip
 
 
