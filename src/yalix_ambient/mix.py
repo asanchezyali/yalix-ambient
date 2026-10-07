@@ -31,7 +31,7 @@ from yalix_ambient.deepspace import EPISODES as DEEP
 from yalix_ambient.music import SR
 from yalix_ambient.music_v2 import Spec, render_track
 from yalix_ambient.pipeline import OUTPUT, run
-from yalix_ambient.series import AEOLIAN, DURATION, HARMONIC_MINOR, Episode
+from yalix_ambient.series import AEOLIAN, DURATION, HARMONIC_MINOR, PHRYGIAN, Episode
 from yalix_ambient.series import EPISODES as DARK
 
 OVERLAP = 6.0  # seconds of crossfade and morph between themes
@@ -89,6 +89,57 @@ DARK_EXTRA = [
 ]  # fmt: skip
 
 _BY_NUMBER = {e.number: e for e in DARK + DARK_EXTRA}
+
+# Inside the hour every theme needs its own atmosphere. Measured on 7-oct, three clusters sounded
+# alike (6/8 processions with strings and bells; tribal arpeggios; half-time walls of guitar), and
+# Foundry and Furnace shared a recipe. These replace the music of those themes in the mix only;
+# several move to the synthwave engine for sounds the dark one lacks (heartbeat, IDM, drum & bass,
+# industrial techno, break, rain). By episode number.
+_dark = {e.number: e.music for e in DARK + DARK_EXTRA}
+DARK_MUSIC = {
+    # Iron Lung: a breathing machine. Heartbeat, reese, drone, a voice, hissing steam.
+    11: cp.Spec(bpm=68, tonic=38, scale=cp.PHRYGIAN, progression=(0, 1, 0, 6), chord_bars=4, groove="heartbeat",
+                bass="reese", pad="drone", lead="vox", arp="none", texture=("steam",), form="slowburn",
+                lead_density=2, reverb_s=5.0, seed=921),
+    # Cathedral of Ice: no drums, glass pad, bells falling at random, Lydian shimmer.
+    2: cp.Spec(bpm=56, tonic=45, scale=cp.LYDIAN, progression=(0, 1, 4, 1), chord_bars=4, groove="none", bass="sub",
+               pad="glass", lead="bell", arp="bell", arp_rate=8, arp_shape="random", form="ambient", lead_density=3,
+               reverb_s=7.0, seed=922),
+    # Furnace: drum & bass at 172, reese and acid over steam.
+    3: cp.Spec(bpm=172, tonic=40, scale=cp.PHRYGIAN, progression=(0, 1, 6, 1), groove="dnb", bass="reese", pad="none",
+               lead="acid", arp="none", texture=("steam",), form="build", lead_density=6, stutter=0.4, seed=923),
+    # Static: IDM, FM bass, chip arpeggio, radio voices, cut-up stutters.
+    4: cp.Spec(bpm=98, tonic=43, scale=cp.HARMONIC_MINOR, progression=(0, 5, 1, 4), groove="idm", bass="fm", pad="none",
+               lead="pluck", arp="chip", arp_shape="random", texture=("radio",), form="loop", lead_density=6,
+               stutter=0.8, seed=924),
+    # Iron: industrial techno, four on the floor with heavy pump.
+    7: cp.Spec(bpm=128, tonic=38, scale=cp.PHRYGIAN, progression=(0, 0, 1, 0), chord_bars=4, groove="four", pump=0.5,
+               bass="pulse", pad="drone", lead="saw", arp="none", texture=("city",), form="club", lead_density=3,
+               seed=925),
+    # Machine: a broken beat, acid bass and square arpeggio in a server room.
+    9: cp.Spec(bpm=118, tonic=41, scale=cp.PHRYGIAN, progression=(0, 1, 6, 5), groove="break", bass="acid", pad="none",
+               lead="square", arp="square", arp_shape="updown", texture=("servers",), form="pulse", lead_density=7,
+               stutter=0.5, seed=926),
+    # Last Rite: the way out. Strings, a sine voice, a slow plucked pendulum, rain.
+    19: cp.Spec(bpm=56, tonic=40, scale=cp.AEOLIAN, progression=(0, 5, 3, 4), chord_bars=4, groove="none", bass="sub",
+                pad="strings", lead="sine", arp="pluck", arp_rate=8, arp_shape="pendulum", texture=("rain",),
+                form="slowburn", lead_density=3, reverb_s=7.0, seed=927),
+    # Music Box: no drums at all, only bells, drone and noise.
+    6: replace(_dark[6], drums="none"),
+    # Bell Tower: in five, bells and timpani over a drone, no strings.
+    17: replace(_dark[17], meters=(5,), layers=("bells", "timpani", "drone", "bass")),
+    # Requiem: a waltz with no drums, the guitar wall swelling under choir and strings.
+    5: replace(_dark[5], drums="none", meters=(12,), bass_timbre="sub", layers=("choir", "strings", "wall", "bass"),
+               reverb_s=6.0),
+    # Moth Swarm: faster and lighter, so the two tribal themes do not blur: arpeggio, strings, sub.
+    16: replace(_dark[16], bpm=96, bass_timbre="sub", layers=("arp", "strings", "noise", "bass")),
+    # Foundry: an industrial march in seven, hammers (timpani) and metal noise instead of the wall.
+    13: replace(_dark[13], layers=("chug", "bass", "timpani", "noise")),
+    # Eclipse: drone doom, a sustained wall with no drums.
+    18: replace(_dark[18], drums="none", bpm=50, layers=("wall", "choir", "drone", "bass")),
+    # Choir of the Void: only voices and a drone, Phrygian, very slow.
+    8: replace(_dark[8], bpm=48, scale=PHRYGIAN, layers=("choir", "drone", "bass"), reverb_s=7.0),
+}  # fmt: skip
 # Calm opening, rising through the middle, glassy and slow towards the end.
 DARK_ORDER = [12, 1, 6, 11, 2, 13, 3, 17, 4, 14, 5, 16, 7, 9, 15, 18, 8, 10, 19]
 
@@ -300,7 +351,7 @@ def any_engine(spec, wav: Path, js: Path) -> None:
 
 
 MIXES = {
-    "dark": ([_BY_NUMBER[n] for n in DARK_ORDER], render_track),
+    "dark": ([replace(_BY_NUMBER[n], music=DARK_MUSIC.get(n, _BY_NUMBER[n].music)) for n in DARK_ORDER], any_engine),
     "cyberpunk": ([_CYBER[n] for n in CYBER_ORDER], cp.render_track),
     "hackers": ([_HACKER[n] for n in HACKER_ORDER], cp.render_track),
     "grunge": ([_GRUNGE[n] for n in GRUNGE_ORDER], gr.render_track),
@@ -369,7 +420,9 @@ def build_audio(name: str, episodes: list[Episode], track_fn, folder: Path) -> t
     return out, analysis, starts
 
 
-def render_mix_video(episodes: list[Episode], analysis: dict, starts: list[float], out: Path) -> None:
+def render_mix_video(
+    episodes: list[Episode], analysis: dict, starts: list[float], out: Path, window: tuple[float, float] | None = None
+) -> None:
     duration = analysis["duration"]
     rms, bass, kick = (np.array(analysis[k]) for k in ("rms", "bass", "kick"))
     n_frames = int(duration * FPS)
@@ -393,7 +446,8 @@ def render_mix_video(episodes: list[Episode], analysis: dict, starts: list[float
         sx, sy, col, size = scene(i).step(t_local, level, k_, FPS)
         return fit(sx, N_POINTS), fit(sy, N_POINTS), fit(col, N_POINTS), fit(size, N_POINTS)
 
-    for k in range(n_frames):
+    frames = range(n_frames) if window is None else range(int(window[0] * FPS), int(window[1] * FPS))
+    for k in frames:
         t = k / FPS
         level, bass_l, kick_l = float(rms[min(k, len(rms) - 1)]), float(bass[min(k, len(bass) - 1)]), float(kick[min(k, len(kick) - 1)])
         # Theme j fades in over [starts[j], starts[j] + OVERLAP) while theme j - 1 fades out.
@@ -469,8 +523,31 @@ def build(name: str) -> Path:
     return final
 
 
+def preview(name: str, t0: float, t1: float) -> Path:
+    """Render only [t0, t1) of a mix, with its audio, to check a look before the full hour."""
+    episodes, track_fn = MIXES[name]
+    folder = OUTPUT / "mixes"
+    wav, analysis, starts = build_audio(name, episodes, track_fn, folder / name)
+    silent, final = folder / f"{name}-preview.silent.mp4", folder / f"{name}-preview-{int(t0)}-{int(t1)}.mp4"
+    render_mix_video(episodes, analysis, starts, silent, window=(t0, t1))
+    run(
+        [
+            "ffmpeg", "-v", "error", "-y", "-i", str(silent), "-ss", str(t0), "-t", str(t1 - t0), "-i", str(wav),
+            "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "384k", "-ar", "48000",
+            "-shortest", "-movflags", "+faststart", str(final),
+        ]
+    )  # fmt: skip
+    silent.unlink(missing_ok=True)
+    return final
+
+
 def main() -> None:
-    for name in sys.argv[1:] or ["dark"]:
+    args = sys.argv[1:] or ["dark"]
+    if "--preview" in args:  # yalix-mix dark --preview 150 270
+        i = args.index("--preview")
+        print(preview(args[0], float(args[i + 1]), float(args[i + 2])))
+        return
+    for name in args:
         build(name)
 
 

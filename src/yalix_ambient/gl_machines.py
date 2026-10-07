@@ -129,3 +129,7 @@ MACHINES = {"rain": CodeRain, "graph": PacketGraph, "clockwork": Clockwork}
 from yalix_ambient.gl_cosmos import COSMOS  # noqa: E402
 
 MACHINES.update(COSMOS)
+
+from yalix_ambient.gl_forms import FORMS  # noqa: E402
+
+MACHINES.update(FORMS)
