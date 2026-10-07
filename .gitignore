@@ -2,5 +2,6 @@
 __pycache__/
 media/
 output/
+output
 *.wav
 *.mp4
