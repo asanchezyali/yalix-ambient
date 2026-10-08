@@ -171,7 +171,7 @@ class Tesseract:
         else:
             V = np.array(list(itertools.product((-1, 1), repeat=4)), dtype=float)
             E = [(i, j) for i, j in itertools.combinations(range(16), 2) if np.abs(V[i] - V[j]).sum() == 2]
-        self.V, self.E = V, np.array(E)
+        self.V, self.E = V / np.linalg.norm(V[0]), np.array(E)  # unit radius, so both polytopes fit
         self.e = rng.integers(0, len(E), n)
         self.s = rng.uniform(0, 1, n)
         self.v = rng.uniform(0.5, 1.5, n) * rng.choice([-1, 1], n)
@@ -192,7 +192,7 @@ class Tesseract:
         c = 0.3 * t
         P3 = P3 @ np.array([[np.cos(c), 0, np.sin(c)], [0, 1, 0], [-np.sin(c), 0, np.cos(c)]]).T
         persp = 1 / (1 + 0.4 * P3[:, 2])
-        xy = P3[:, :2] * persp[:, None] * 0.95 * (1 + 0.012 * kick)
+        xy = P3[:, :2] * persp[:, None] * 1.35 * (1 + 0.012 * kick)
         hue = np.clip((P[:, 3] + 1.5) / 3, 0, 1)
         fade = np.clip(0.4 + 0.6 * persp * w * 2, 0, 1) * (0.85 + 0.15 * level)
         return xy, hue, fade

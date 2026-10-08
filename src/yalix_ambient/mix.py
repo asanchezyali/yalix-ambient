@@ -205,7 +205,7 @@ CYBER_EXTRA = [
 
 _CYBER = {e.number: e for e in CYBER + CYBER_EXTRA}
 # Calm start, energy through the middle, no two neighbouring themes with the same groove.
-CYBER_ORDER = [1, 11, 3, 17, 4, 14, 7, 15, 5, 12, 2, 16, 18, 8, 13, 6, 10, 9, 19]
+CYBER_ORDER = [11, 1, 3, 17, 4, 14, 7, 15, 5, 12, 2, 16, 18, 8, 13, 6, 10, 9, 19]
 
 # Nine more dark steampunk hacker themes: the attractors the series had not used (Sprott, Lü,
 # Burke-Shaw, Rucklidge, Chen, Aizawa, Halvorsen, Lorenz) plus a three-pole field, and two
@@ -345,6 +345,42 @@ _GRUNGE = {e.number: e for e in GRUNGE + GRUNGE_EXTRA}
 GRUNGE_ORDER = [11, 1, 15, 3, 12, 5, 2, 14, 4, 7, 16, 9, 18, 13, 6, 17, 8, 19, 10]
 
 
+def _form(family: str, system: str = "lorenz", **kw) -> dict:
+    """A non-attractor figure for a theme, keeping its palette, nebula and style."""
+    return dict(family=family, system=system, **{**dict(particles=9000, size=1.8, trail=0.965, intensity=0.9, bloom=0.45), **kw})
+
+
+# The dark and cyberpunk mixes had almost the same attractors in the same roles. These swaps give
+# each mix its own figures (forms and cosmos families), and no two mixes open with the same one.
+CYBER_VISUALS = {
+    14: _form("rose"),
+    15: _form("tesseract", "16cell"),
+    2: _form("knot", "35"),
+    13: _form("harmonograph", intensity=0.8),
+    6: _form("map", "clifford", intensity=0.7),
+}
+HACKER_VISUALS = {
+    11: _form("tesseract"),
+    5: _form("chladni"),
+    16: _form("knot", "37"),
+    18: _form("pendulums"),
+    8: _form("map", "dejong", intensity=0.7),
+    6: _form("spirograph"),
+}
+GRUNGE_VISUALS = {
+    1: _form("rose"),
+    2: _form("chladni"),
+    16: _form("pendulums"),
+    13: _form("harmonograph", intensity=0.8),
+    6: _form("knot", "trefoil"),
+    10: _form("spirograph"),
+}
+
+
+def _restyle(ep: Episode, swaps: dict) -> Episode:
+    return replace(ep, visual=replace(ep.visual, **swaps[ep.number])) if ep.number in swaps else ep
+
+
 def any_engine(spec, wav: Path, js: Path) -> None:
     """Deep Space alternates engines: pick the renderer from the spec's type."""
     (cp.render_track if isinstance(spec, cp.Spec) else render_track)(spec, wav, js)
@@ -352,9 +388,9 @@ def any_engine(spec, wav: Path, js: Path) -> None:
 
 MIXES = {
     "dark": ([replace(_BY_NUMBER[n], music=DARK_MUSIC.get(n, _BY_NUMBER[n].music)) for n in DARK_ORDER], any_engine),
-    "cyberpunk": ([_CYBER[n] for n in CYBER_ORDER], cp.render_track),
-    "hackers": ([_HACKER[n] for n in HACKER_ORDER], cp.render_track),
-    "grunge": ([_GRUNGE[n] for n in GRUNGE_ORDER], gr.render_track),
+    "cyberpunk": ([_restyle(_CYBER[n], CYBER_VISUALS) for n in CYBER_ORDER], cp.render_track),
+    "hackers": ([_restyle(_HACKER[n], HACKER_VISUALS) for n in HACKER_ORDER], cp.render_track),
+    "grunge": ([_restyle(_GRUNGE[n], GRUNGE_VISUALS) for n in GRUNGE_ORDER], gr.render_track),
     "deepspace": (DEEP, any_engine),
 }
 
