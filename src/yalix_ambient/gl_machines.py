@@ -133,3 +133,7 @@ MACHINES.update(COSMOS)
 from yalix_ambient.gl_forms import FORMS  # noqa: E402
 
 MACHINES.update(FORMS)
+
+from yalix_ambient.gl_cymatics import CYMATICS  # noqa: E402
+
+MACHINES.update(CYMATICS)
