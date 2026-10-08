@@ -43,6 +43,8 @@ THUMBS = {
     "grunge": Thumb(1030, "GRUNGE CHAOS", "#ff8a2a", "#f2d38a", ("SEATTLE GRUNGE FOR FOCUS", "GENERATED WITH MATH"),
                     title_size=224),
     "deepspace": Thumb(1218, "DEEP SPACE", "#ffb070", "#9fc8ff", ("SPACE AMBIENT, NO DRUMS", "GENERATED WITH MATH")),
+    "handpan": Thumb(3100, "HANDPAN REGGAE", "#ffc24a", "#7dff9a", ("STEEL HANDPAN FOR FOCUS", "GENERATED WITH MATH"),
+                     title_size=196),
 }  # fmt: skip
 
 
