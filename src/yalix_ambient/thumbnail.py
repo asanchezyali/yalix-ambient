@@ -40,6 +40,9 @@ THUMBS = {
     "cyberpunk": Thumb(280, "NEON CHAOS", "#ff2bd6", "#22e6ff", ("CYBERPUNK & SYNTHWAVE", "GENERATED WITH MATH")),
     "hackers": Thumb(1229, "HACKER CHAOS", "#ffb52e", "#3dff8a", ("DARK STEAMPUNK CODING MUSIC", "GENERATED WITH MATH"),
                      title_size=224),
+    "grunge": Thumb(1030, "GRUNGE CHAOS", "#ff8a2a", "#f2d38a", ("SEATTLE GRUNGE FOR FOCUS", "GENERATED WITH MATH"),
+                    title_size=224),
+    "deepspace": Thumb(1218, "DEEP SPACE", "#ffb070", "#9fc8ff", ("SPACE AMBIENT, NO DRUMS", "GENERATED WITH MATH")),
 }  # fmt: skip
 
 
