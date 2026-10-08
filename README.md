@@ -101,3 +101,8 @@ src/yalix_ambient/
   mix.py                                             one-hour mixes, morphing, chapters
   thumbnail.py                                       YouTube thumbnails from a rendered frame
 ```
+
+## License
+
+The code is released under the [MIT License](LICENSE). The published videos and their music belong to
+the Yalix Code Music channel.
