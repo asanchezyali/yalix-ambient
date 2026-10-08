@@ -37,7 +37,7 @@ class Thumb:
 
 THUMBS = {
     "dark": Thumb(1700, "DARK CHAOS", "#ff2a3a", "#ff5a5a", ("MUSIC & VISUALS", "GENERATED WITH MATH")),
-    "cyberpunk": Thumb(470, "NEON CHAOS", "#ff2bd6", "#22e6ff", ("CYBERPUNK & SYNTHWAVE", "GENERATED WITH MATH")),
+    "cyberpunk": Thumb(280, "NEON CHAOS", "#ff2bd6", "#22e6ff", ("CYBERPUNK & SYNTHWAVE", "GENERATED WITH MATH")),
     "hackers": Thumb(1229, "HACKER CHAOS", "#ffb52e", "#3dff8a", ("DARK STEAMPUNK CODING MUSIC", "GENERATED WITH MATH"),
                      title_size=224),
 }  # fmt: skip
