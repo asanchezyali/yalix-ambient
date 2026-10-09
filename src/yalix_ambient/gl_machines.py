@@ -141,3 +141,11 @@ MACHINES.update(CYMATICS)
 from yalix_ambient.gl_industrial import INDUSTRIAL  # noqa: E402
 
 MACHINES.update(INDUSTRIAL)
+
+from yalix_ambient.gl_gothic import GOTHIC  # noqa: E402
+
+MACHINES.update(GOTHIC)
+
+from yalix_ambient.gl_psy import PSY  # noqa: E402
+
+MACHINES.update(PSY)

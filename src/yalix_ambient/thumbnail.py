@@ -47,6 +47,10 @@ THUMBS = {
                      title_size=196),
     "industrial": Thumb(2380, "INDUSTRIAL", "#ff6a1a", "#c8d2dc", ("HEAVY MEDITATION FOR DEEP WORK", "GENERATED WITH MATH"),
                         title_size=224),
+    "gothic": Thumb(2570, "GOTHIC TRAP", "#c13cff", "#ffc46b", ("HARPSICHORD & 808 FOR NIGHT WORK", "GENERATED WITH MATH"),
+                    title_size=210),
+    "psytechno": Thumb(2190, "PSYTECHNO", "#b44dff", "#5ff7ff", ("DARK PSY TECHNO FOR DEEP FOCUS", "GENERATED WITH MATH"),
+                       title_size=224),
 }  # fmt: skip
 
 

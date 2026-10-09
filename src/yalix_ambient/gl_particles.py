@@ -78,6 +78,19 @@ PALETTES = {
     "sodium": [[1.00, 0.72, 0.30], [0.90, 0.45, 0.10], [1.00, 0.88, 0.60], [0.55, 0.30, 0.10]],
     "arc": [[0.70, 0.85, 1.00], [0.35, 0.55, 1.00], [0.95, 0.97, 1.00], [0.60, 0.40, 1.00]],
     "hazard": [[1.00, 0.80, 0.10], [0.95, 0.40, 0.05], [0.85, 0.85, 0.80], [0.55, 0.50, 0.45]],
+    # gothic: candlelight, velvet, amethyst, absinthe and moonlight on stone
+    "candle": [[1.00, 0.78, 0.40], [0.95, 0.55, 0.20], [1.00, 0.92, 0.75], [0.70, 0.35, 0.15]],
+    "velvet": [[0.75, 0.05, 0.15], [0.45, 0.02, 0.20], [0.95, 0.35, 0.40], [0.30, 0.05, 0.35]],
+    "amethyst": [[0.65, 0.35, 0.95], [0.40, 0.15, 0.70], [0.90, 0.70, 1.00], [0.85, 0.25, 0.55]],
+    "absinthe": [[0.55, 0.90, 0.35], [0.25, 0.60, 0.30], [0.85, 1.00, 0.70], [0.60, 0.35, 0.75]],
+    "moonlight": [[0.75, 0.82, 1.00], [0.45, 0.50, 0.75], [0.95, 0.95, 1.00], [0.60, 0.45, 0.80]],
+    "cathedral": [[0.90, 0.15, 0.20], [0.20, 0.35, 0.95], [1.00, 0.75, 0.25], [0.35, 0.75, 0.45]],
+    # psytechno: blacklight on a dark floor: ultraviolet, toxic green, lava, saffron, shaman teal
+    "blacklight": [[0.75, 0.20, 1.00], [0.10, 0.90, 1.00], [1.00, 0.25, 0.75], [0.35, 0.25, 1.00]],
+    "toxic": [[0.60, 1.00, 0.10], [0.10, 0.80, 0.50], [0.90, 1.00, 0.50], [0.30, 0.55, 0.10]],
+    "lava": [[1.00, 0.30, 0.05], [0.80, 0.05, 0.10], [1.00, 0.60, 0.10], [0.50, 0.02, 0.08]],
+    "saffron": [[1.00, 0.60, 0.10], [0.95, 0.20, 0.50], [1.00, 0.85, 0.40], [0.60, 0.10, 0.40]],
+    "shaman": [[0.10, 0.80, 0.80], [0.95, 0.75, 0.20], [0.15, 0.40, 0.65], [0.80, 0.30, 0.10]],
 }
 NEBULAE = {
     "crimson": [[0.16, 0.01, 0.04], [0.10, 0.02, 0.15], [0.04, 0.01, 0.08], [0.14, 0.02, 0.09]],
@@ -110,6 +123,14 @@ NEBULAE = {
     "concrete": [[0.06, 0.06, 0.07], [0.04, 0.05, 0.06], [0.07, 0.06, 0.05], [0.03, 0.03, 0.04]],
     "nightshift": [[0.09, 0.05, 0.02], [0.03, 0.03, 0.04], [0.07, 0.04, 0.02], [0.02, 0.02, 0.03]],
     "arcnight": [[0.02, 0.04, 0.10], [0.01, 0.02, 0.05], [0.04, 0.03, 0.09], [0.01, 0.01, 0.03]],
+    # gothic: a crypt by candlelight, wine-dark velvet, cold moonlit stone
+    "crypt": [[0.07, 0.04, 0.03], [0.04, 0.02, 0.05], [0.06, 0.03, 0.02], [0.02, 0.02, 0.03]],
+    "wine": [[0.10, 0.01, 0.04], [0.05, 0.00, 0.05], [0.08, 0.02, 0.03], [0.03, 0.00, 0.02]],
+    "moonstone": [[0.03, 0.04, 0.09], [0.05, 0.03, 0.08], [0.02, 0.03, 0.06], [0.04, 0.04, 0.07]],
+    # psytechno: a dark dancefloor under UV, a jungle at night, red smoke
+    "uvfloor": [[0.06, 0.00, 0.10], [0.02, 0.00, 0.06], [0.05, 0.01, 0.08], [0.01, 0.00, 0.03]],
+    "nightjungle": [[0.01, 0.06, 0.03], [0.00, 0.03, 0.03], [0.02, 0.05, 0.02], [0.00, 0.02, 0.01]],
+    "redsmoke": [[0.09, 0.01, 0.01], [0.04, 0.00, 0.02], [0.07, 0.02, 0.01], [0.02, 0.00, 0.00]],
 }
 
 # ------------------------------------------------------------------ attractors
@@ -257,7 +278,7 @@ def dipole_field(xy: np.ndarray, t: float, n_dipoles: int, seed: int) -> np.ndar
 
 @dataclass
 class Visual:
-    family: str = "attractor"  # attractor | magnetic | flow | rain | graph | clockwork | orbits | galaxy | harmonograph | map | spirograph | membrane | ripples | mandala | turing | sparks | linkage | lattice | convection
+    family: str = "attractor"  # attractor | magnetic | flow | rain | graph | clockwork | orbits | galaxy | harmonograph | map | spirograph | membrane | ripples | mandala | turing | sparks | linkage | lattice | convection | apollonian | nave | flock | glass | yantra | tunnel | chaos | moire
     system: str = "lorenz"
     dipoles: int = 2
     palette: str = "ember"
