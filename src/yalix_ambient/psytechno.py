@@ -23,7 +23,7 @@ def _v(family: str, system: str, palette: str, nebula: str, seed: int, **kw) -> 
         "yantra": {"trail": 0.85, "intensity": 1.1},
         "tunnel": {"trail": 0.8, "intensity": 1.2, "size": 2.0},
         "chaos": {"trail": 0.7, "intensity": 0.9, "size": 1.6},
-        "moire": {"trail": 0.75, "intensity": 0.9, "size": 1.7},
+        "moire": {"trail": 0.85, "intensity": 1.5, "size": 2.1},
     }[family])  # fmt: skip
     return Visual(family=family, system=system, palette=palette, nebula=nebula, seed=seed, **{**base, **kw})
 

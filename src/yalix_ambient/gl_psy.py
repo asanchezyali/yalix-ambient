@@ -183,7 +183,7 @@ class Chaos:
 class Moire:
     def __init__(self, n: int, rng: np.random.Generator, vis) -> None:
         self.rng = rng
-        self.rings = 34
+        self.rings = 18  # fewer, bolder rings: the interference reads at a glance
         self.set = rng.integers(0, 2, n)
         self.i = rng.integers(1, self.rings + 1, n)
         self.th = rng.uniform(0, 2 * np.pi, n)
@@ -202,7 +202,7 @@ class Moire:
         xy = np.column_stack([cx + r * np.cos(self.th + sgn * 0.01 * t), r * np.sin(self.th + sgn * 0.01 * t)])
         self.amp *= 0.92
         hue = (self.i / self.rings + 0.5 * self.set) % 1.0
-        fade = np.clip(1.25 - r, 0.2, 1) * (0.7 + 0.3 * level)
+        fade = np.clip(1.4 - 0.6 * r, 0.5, 1) * (0.8 + 0.2 * level)
         return xy, hue, fade
 
 
