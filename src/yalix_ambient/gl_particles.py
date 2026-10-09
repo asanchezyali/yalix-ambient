@@ -72,6 +72,12 @@ PALETTES = {
     "reef": [[0.20, 0.85, 1.00], [1.00, 0.50, 0.60], [1.00, 0.85, 0.30], [0.60, 0.45, 1.00]],
     "roots": [[0.30, 0.80, 0.35], [1.00, 0.80, 0.20], [0.90, 0.25, 0.20], [0.95, 0.90, 0.70]],
     "tide": [[0.35, 0.75, 1.00], [0.85, 0.95, 1.00], [0.15, 0.45, 0.80], [0.50, 0.95, 0.85]],
+    # industrial: hot metal cooling, cold steel, sodium lamps and the blue of an arc
+    "molten": [[1.00, 0.95, 0.80], [1.00, 0.60, 0.15], [0.85, 0.20, 0.05], [0.35, 0.06, 0.03]],
+    "steel": [[0.75, 0.82, 0.90], [0.45, 0.52, 0.60], [0.95, 0.97, 1.00], [1.00, 0.55, 0.20]],
+    "sodium": [[1.00, 0.72, 0.30], [0.90, 0.45, 0.10], [1.00, 0.88, 0.60], [0.55, 0.30, 0.10]],
+    "arc": [[0.70, 0.85, 1.00], [0.35, 0.55, 1.00], [0.95, 0.97, 1.00], [0.60, 0.40, 1.00]],
+    "hazard": [[1.00, 0.80, 0.10], [0.95, 0.40, 0.05], [0.85, 0.85, 0.80], [0.55, 0.50, 0.45]],
 }
 NEBULAE = {
     "crimson": [[0.16, 0.01, 0.04], [0.10, 0.02, 0.15], [0.04, 0.01, 0.08], [0.14, 0.02, 0.09]],
@@ -99,6 +105,11 @@ NEBULAE = {
     "golden": [[0.20, 0.12, 0.05], [0.16, 0.07, 0.08], [0.10, 0.07, 0.05], [0.22, 0.15, 0.07]],
     "clay": [[0.18, 0.09, 0.06], [0.12, 0.08, 0.07], [0.08, 0.05, 0.04], [0.16, 0.11, 0.08]],
     "twilight": [[0.08, 0.08, 0.20], [0.18, 0.08, 0.14], [0.05, 0.06, 0.14], [0.14, 0.10, 0.18]],
+    # industrial: the dark of a plant at night
+    "smelter": [[0.12, 0.04, 0.01], [0.05, 0.02, 0.02], [0.09, 0.03, 0.01], [0.03, 0.02, 0.02]],
+    "concrete": [[0.06, 0.06, 0.07], [0.04, 0.05, 0.06], [0.07, 0.06, 0.05], [0.03, 0.03, 0.04]],
+    "nightshift": [[0.09, 0.05, 0.02], [0.03, 0.03, 0.04], [0.07, 0.04, 0.02], [0.02, 0.02, 0.03]],
+    "arcnight": [[0.02, 0.04, 0.10], [0.01, 0.02, 0.05], [0.04, 0.03, 0.09], [0.01, 0.01, 0.03]],
 }
 
 # ------------------------------------------------------------------ attractors
@@ -246,7 +257,7 @@ def dipole_field(xy: np.ndarray, t: float, n_dipoles: int, seed: int) -> np.ndar
 
 @dataclass
 class Visual:
-    family: str = "attractor"  # attractor | magnetic | flow | rain | graph | clockwork | orbits | galaxy | harmonograph | map | spirograph | membrane | ripples | mandala | turing
+    family: str = "attractor"  # attractor | magnetic | flow | rain | graph | clockwork | orbits | galaxy | harmonograph | map | spirograph | membrane | ripples | mandala | turing | sparks | linkage | lattice | convection
     system: str = "lorenz"
     dipoles: int = 2
     palette: str = "ember"

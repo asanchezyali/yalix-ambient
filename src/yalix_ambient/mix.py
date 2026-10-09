@@ -30,6 +30,8 @@ from yalix_ambient import music_grunge as gr
 from yalix_ambient.deepspace import EPISODES as DEEP
 from yalix_ambient.handpan import EPISODES as HANDPAN
 from yalix_ambient import music_handpan as hpm
+from yalix_ambient.industrial import EPISODES as INDUSTRIAL
+from yalix_ambient import music_industrial as ind
 from yalix_ambient.music import SR
 from yalix_ambient.music_v2 import Spec, render_track
 from yalix_ambient.pipeline import OUTPUT, run
@@ -395,6 +397,7 @@ MIXES = {
     "grunge": ([_restyle(_GRUNGE[n], GRUNGE_VISUALS) for n in GRUNGE_ORDER], gr.render_track),
     "deepspace": (DEEP, any_engine),
     "handpan": (HANDPAN, hpm.render_track),
+    "industrial": (INDUSTRIAL, ind.render_track),
 }
 
 
